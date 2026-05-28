@@ -46,7 +46,7 @@ export type GoalPatch = z.infer<typeof GoalPatchSchema>;
 
 export const TaskSchema = z.object({
   _id: z.string(),
-  goal_id: z.string(),
+  goal_id: z.string().nullable().default(null),
   parent_task_id: z.string().nullable().default(null),
   title: z.string().min(1),
   description: z.string().nullable().default(null),

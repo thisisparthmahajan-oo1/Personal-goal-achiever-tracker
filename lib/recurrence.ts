@@ -18,9 +18,10 @@ export function expandRecurrence(
   const end = rule.end_date && isBefore(rule.end_date, rangeEnd) ? rule.end_date : rangeEnd;
   const interval = Math.max(1, rule.interval);
 
-  // Normalize to midnight UTC for consistent keys.
+  // Normalize to UTC midnight of the LOCAL calendar day so cross-day
+  // comparisons line up with whatever timezone the viewer/server is in.
   const norm = (d: Date) =>
-    new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 
   const startNorm = norm(rangeStart);
   const endNorm = norm(end);

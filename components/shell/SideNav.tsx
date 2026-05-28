@@ -14,8 +14,8 @@ type Item = {
 
 const ITEMS: Item[] = [
   { href: "/", label: "Goals", icon: Target, enabled: true },
+  { href: "/habits", label: "Habits", icon: Repeat, enabled: true },
   { href: "/notes", label: "Notes", icon: FileText, enabled: false },
-  { href: "/habits", label: "Habits", icon: Repeat, enabled: false },
   { href: "/aggregator", label: "Aggregator", icon: LayoutGrid, enabled: false },
 ];
 

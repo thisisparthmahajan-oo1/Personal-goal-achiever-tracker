@@ -95,5 +95,10 @@ export async function toggleOccurrenceAction(
 ) {
   const date = new Date(occurrenceDate);
   await tasks.toggleOccurrence(taskId, date);
-  revalidatePath(`/goals/${goalId}`);
+  if (goalId) {
+    revalidatePath(`/goals/${goalId}`);
+  } else {
+    revalidatePath("/habits");
+  }
+  revalidatePath("/");
 }

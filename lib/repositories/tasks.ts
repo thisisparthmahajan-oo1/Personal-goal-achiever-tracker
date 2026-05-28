@@ -10,7 +10,14 @@ import {
   type TaskInstance,
   type TaskStatus,
 } from "@/lib/schemas";
-import { expandRecurrence } from "@/lib/recurrence";
+import { format } from "date-fns";
+import { expandRecurrence, startOfDay } from "@/lib/recurrence";
+
+// Shared local-calendar-day key used across the file so occurrence dates
+// (UTC midnight of a local day) compare consistently with "today".
+function dayKey(d: Date): string {
+  return format(d, "yyyy-MM-dd");
+}
 
 const COLLECTION = "tasks";
 const INSTANCES = "task_instances";
@@ -55,7 +62,7 @@ async function validateDepthForInsert(parentTaskId: string | null) {
  * past its allowed maximum (100 at root, parent.weight for subtasks).
  */
 async function validateWeightBudget(args: {
-  goal_id: string;
+  goal_id: string | null;
   parent_task_id: string | null;
   weight: number;
   excludeTaskId?: string;
@@ -105,13 +112,13 @@ async function validateRecurringConstraints(args: {
 // ---------- Reads ----------
 
 export async function list(filter?: {
-  goal_id?: string;
+  goal_id?: string | null;
   status?: TaskStatus;
   parent_task_id?: string | null;
 }): Promise<Task[]> {
   const col = await collection();
   const q: Record<string, unknown> = {};
-  if (filter?.goal_id) q.goal_id = filter.goal_id;
+  if (filter?.goal_id !== undefined) q.goal_id = filter.goal_id;
   if (filter?.status) q.status = filter.status;
   if (filter?.parent_task_id !== undefined) q.parent_task_id = filter.parent_task_id;
   const docs = await col.find(q).sort({ created_at: 1 }).toArray();
@@ -292,11 +299,13 @@ export async function toggleOccurrence(
   occurrenceDate: Date
 ): Promise<TaskInstance> {
   const col = await instancesCollection();
+  // Normalize to UTC midnight of the LOCAL calendar day — matches the
+  // normalization used by expandRecurrence so instance lookups line up.
   const date = new Date(
     Date.UTC(
-      occurrenceDate.getUTCFullYear(),
-      occurrenceDate.getUTCMonth(),
-      occurrenceDate.getUTCDate()
+      occurrenceDate.getFullYear(),
+      occurrenceDate.getMonth(),
+      occurrenceDate.getDate()
     )
   );
   const existing = await col.findOne({ task_id: taskId, occurrence_date: date });
@@ -356,8 +365,6 @@ export async function getOccurrencesForGoal(
     })
     .toArray();
 
-  const dayKey = (d: Date) =>
-    `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
   const completedSet = new Set<string>();
   for (const i of instances) {
     if (i.completed_at) {
@@ -428,4 +435,165 @@ export function computeGoalProgress(allTasks: Task[]): GoalProgress {
   }
 
   return { progress_pct, planned_pct, history };
+}
+
+// ---------- Habits ----------
+
+/**
+ * All recurring tasks across the system — both goal-attached and standalone.
+ */
+export async function listHabits(): Promise<Task[]> {
+  const col = await collection();
+  const docs = await col
+    .find({ recurrence: { $ne: null } })
+    .sort({ created_at: -1 })
+    .toArray();
+  return docs.map((d) => TaskSchema.parse(d));
+}
+
+/**
+ * Cross-goal version of getOccurrencesForGoal. Expands recurrence for every
+ * recurring task and joins with task_instances within the window.
+ */
+export async function getAllOccurrences(
+  rangeStart: Date,
+  rangeEnd: Date
+): Promise<Record<string, Occurrence[]>> {
+  const taskCol = await collection();
+  const recurring = await taskCol
+    .find({ recurrence: { $ne: null } })
+    .toArray();
+  if (recurring.length === 0) return {};
+  const parsed = recurring.map((d) => TaskSchema.parse(d));
+
+  const instCol = await instancesCollection();
+  const instances = await instCol
+    .find({
+      task_id: { $in: parsed.map((t) => t._id) },
+      occurrence_date: { $gte: rangeStart, $lte: rangeEnd },
+    })
+    .toArray();
+
+  const completedSet = new Set<string>();
+  for (const i of instances) {
+    if (i.completed_at) {
+      completedSet.add(`${i.task_id}|${dayKey(new Date(i.occurrence_date))}`);
+    }
+  }
+
+  const out: Record<string, Occurrence[]> = {};
+  for (const t of parsed) {
+    if (!t.recurrence) continue;
+    const anchor = t.due_date ?? t.created_at;
+    const dates = expandRecurrence(t.recurrence, anchor, rangeStart, rangeEnd);
+    out[t._id] = dates.map((date) => ({
+      date,
+      completed: completedSet.has(`${t._id}|${dayKey(date)}`),
+    }));
+  }
+  return out;
+}
+
+/**
+ * Fetch every recorded instance for a set of task ids (no date bound).
+ * Used by streak computation, which needs to see the full history.
+ */
+export async function getAllInstancesForTasks(
+  taskIds: string[]
+): Promise<Record<string, TaskInstance[]>> {
+  const out: Record<string, TaskInstance[]> = {};
+  for (const id of taskIds) out[id] = [];
+  if (taskIds.length === 0) return out;
+  const col = await instancesCollection();
+  const docs = await col.find({ task_id: { $in: taskIds } }).toArray();
+  for (const d of docs) {
+    const parsed = TaskInstanceSchema.parse(d);
+    (out[parsed.task_id] ??= []).push(parsed);
+  }
+  return out;
+}
+
+/**
+ * Effective list of weekdays a habit is scheduled on (0=Sun..6=Sat).
+ * Legacy "daily" habits are treated as every weekday so the routine view
+ * works without a migration pass.
+ */
+export function getHabitWeekdays(task: Task): number[] {
+  if (!task.recurrence) return [];
+  if (task.recurrence.freq === "daily") return [0, 1, 2, 3, 4, 5, 6];
+  if (task.recurrence.freq === "weekly") {
+    return task.recurrence.weekdays && task.recurrence.weekdays.length > 0
+      ? task.recurrence.weekdays
+      : [0, 1, 2, 3, 4, 5, 6];
+  }
+  return []; // monthly habits don't sit on the weekly routine grid
+}
+
+export type Streaks = {
+  current: number;
+  longest: number;
+  last_completed: Date | null;
+};
+
+/**
+ * Compute streaks for a recurring task from its full instance history.
+ *
+ * Rule: an unfinished TODAY does not break the streak — the day is still
+ * "decidable." Only a past occurrence that was scheduled-but-not-completed
+ * breaks it.
+ */
+export function computeStreaks(
+  task: Task,
+  instances: TaskInstance[]
+): Streaks {
+  if (!task.recurrence) {
+    return { current: 0, longest: 0, last_completed: null };
+  }
+  const today = startOfDay(new Date());
+  const anchor = task.due_date ?? task.created_at;
+  const occurrences = expandRecurrence(task.recurrence, anchor, anchor, today);
+  if (occurrences.length === 0) {
+    return { current: 0, longest: 0, last_completed: null };
+  }
+
+  const completedSet = new Set<string>();
+  let lastCompleted: Date | null = null;
+  for (const i of instances) {
+    if (!i.completed_at) continue;
+    const d = new Date(i.occurrence_date);
+    completedSet.add(dayKey(d));
+    if (!lastCompleted || d > lastCompleted) lastCompleted = d;
+  }
+
+  // Longest streak: chronological scan.
+  let longest = 0;
+  let run = 0;
+  for (const occ of occurrences) {
+    if (completedSet.has(dayKey(occ))) {
+      run++;
+      if (run > longest) longest = run;
+    } else {
+      run = 0;
+    }
+  }
+
+  // Current streak: walk backward from today.
+  const desc = [...occurrences].sort((a, b) => +b - +a);
+  const todayKey = dayKey(today);
+  let startIdx = 0;
+  if (
+    desc.length > 0 &&
+    dayKey(desc[0]) === todayKey &&
+    !completedSet.has(todayKey)
+  ) {
+    // Today is an occurrence but not done yet — don't penalize, look back further.
+    startIdx = 1;
+  }
+  let current = 0;
+  for (let i = startIdx; i < desc.length; i++) {
+    if (completedSet.has(dayKey(desc[i]))) current++;
+    else break;
+  }
+
+  return { current, longest, last_completed: lastCompleted };
 }

@@ -99,6 +99,7 @@ export async function getDashboardSummary(): Promise<GoalSummary[]> {
   const tasksByGoal = new Map<string, Task[]>();
   for (const t of tasks) {
     const parsed = TaskSchema.parse(t);
+    if (!parsed.goal_id) continue; // standalone habit, not part of any goal
     const arr = tasksByGoal.get(parsed.goal_id) ?? [];
     arr.push(parsed);
     tasksByGoal.set(parsed.goal_id, arr);

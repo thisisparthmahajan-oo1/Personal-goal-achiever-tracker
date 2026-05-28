@@ -163,9 +163,9 @@ server.registerTool(
   {
     title: "Create task",
     description:
-      "Create a task under a goal. Use 'weight' (0-100) to define its share of the goal — root task weights must sum to 100, subtask weights must sum to their parent's weight. Use parent_task_id for subtasks (max 2 nesting levels). Use 'recurrence' to make it a recurring habit, in which case weight must be 0 and no subtasks are allowed.",
+      "Create a task or habit. If 'goal_id' is provided, the task belongs to that goal — use 'weight' (0-100) for its share of the goal (root weights sum to 100; subtask weights sum to parent's weight). If 'goal_id' is omitted or null, the task is a standalone habit; in that case 'recurrence' must be set, 'weight' must be 0, and no subtasks are allowed. Use parent_task_id for subtasks (max 2 nesting levels).",
     inputSchema: {
-      goal_id: z.string(),
+      goal_id: z.string().nullable().optional(),
       title: z.string().min(1).max(200),
       weight: z.number().int().min(0).max(100).default(0),
       parent_task_id: z.string().nullable().optional(),
@@ -197,7 +197,7 @@ server.registerTool(
       : null;
     try {
       const task = await tasks.create({
-        goal_id,
+        goal_id: goal_id ?? null,
         title,
         weight,
         parent_task_id: parent_task_id ?? null,
