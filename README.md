@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Personal Tracker
 
-## Getting Started
+Single-user, local web app for tracking progress against personal focus areas. Built around two write surfaces: a manual web UI, and an MCP server Claude Code can drive during a research session.
 
-First, run the development server:
+See `REQUIREMENTS.md` for the frozen spec.
 
-```bash
+## Quickstart
+
+Requires Node 20+ and a running local `mongod` on `mongodb://127.0.0.1:27017`.
+
+```sh
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## MCP server
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The MCP server exposes typed tools for Claude Code to create/update goals, tasks, and check-ins.
 
-## Learn More
+### Run manually
 
-To learn more about Next.js, take a look at the following resources:
+```sh
+npm run mcp
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Wire it into Claude Code
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Add to your Claude Code MCP config (replace the path):
 
-## Deploy on Vercel
+```json
+{
+  "mcpServers": {
+    "personal-tracker": {
+      "command": "npx",
+      "args": ["tsx", "/absolute/path/to/personal-tracker/mcp-server/index.ts"]
+    }
+  }
+}
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+After restarting Claude Code, you'll be able to ask Claude to list/create goals and tasks directly from the terminal.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Tools exposed
+
+- `list_goals` / `get_goal` / `create_goal` / `update_goal`
+- `list_tasks` / `create_task` / `update_task` / `delete_task`
+- `set_recurrence`
+- `log_checkin` / `list_checkins`
+
+## Stack
+
+- Next.js 16 (App Router), React 19
+- MongoDB (`mongodb` driver, no ODM)
+- Zod schemas as the single source of truth (shared by Next routes and the MCP server)
+- Tailwind v4 + shadcn/ui (base-ui flavor)
+- Recharts for the trend chart, hand-rolled SVG for sparklines
+- Framer Motion for entrances
+
+## Project layout
+
+```
+app/                Next.js App Router (UI + server actions)
+components/         UI components — dashboard/, goal/, forms/, motion/, ui/ (shadcn)
+lib/
+  db.ts             Mongo client singleton
+  schemas.ts        Zod schemas (single source of truth)
+  recurrence.ts     Virtual recurrence expansion (no eager instance creation)
+  repositories/     Thin CRUD wrappers, Zod-parsed on read
+mcp-server/         Stdio MCP server, imports lib/* directly
+```
+
+## Env
+
+Configurable via `.env.local`:
+
+```
+MONGODB_URI=mongodb://127.0.0.1:27017
+DB_NAME=personal_tracker
+```

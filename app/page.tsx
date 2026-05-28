@@ -1,65 +1,65 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
+import { GoalCard } from "@/components/dashboard/GoalCard";
+import { StaggerFade, FadeInItem } from "@/components/motion/StaggerFade";
+import { getDashboardSummary } from "@/lib/repositories/goals";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const goals = await getDashboardSummary();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="mx-auto max-w-7xl px-8 py-10">
+      <header className="mb-10 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground mb-2">
+            <span className="text-primary">●</span>
+            <span className="ml-2">Dashboard / Goals</span>
+          </p>
+          <h1 className="text-4xl font-semibold tracking-tight">
+            Focus areas
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="priv mt-2 text-sm text-muted-foreground">
+            {goals.length === 0
+              ? "No active goals yet."
+              : `${goals.length} active · tracking ${goals.reduce(
+                  (s, g) => s + g.planned_pct,
+                  0
+                )}% of planned weight`}
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <Link href="/goals/new" className={buttonVariants({ size: "lg" })}>
+          <Plus className="size-4" />
+          New goal
+        </Link>
+      </header>
+
+      {goals.length === 0 ? (
+        <div className="relative overflow-hidden rounded-2xl border border-border/40 bg-card/40 p-16 text-center backdrop-blur-xl">
+          <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Define a goal here, or let Claude Code create one for you via the
+            MCP server during a research session.
+          </p>
+          <div className="mt-6">
+            <Link href="/goals/new" className={buttonVariants()}>
+              Create your first goal
+            </Link>
+          </div>
         </div>
-      </main>
+      ) : (
+        <StaggerFade>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {goals.map((g) => (
+              <FadeInItem key={g._id}>
+                <GoalCard goal={g} />
+              </FadeInItem>
+            ))}
+          </div>
+        </StaggerFade>
+      )}
     </div>
   );
 }
