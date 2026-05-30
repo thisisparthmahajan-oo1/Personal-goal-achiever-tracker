@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Trash2, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, Trash2, ChevronRight, ChevronDown, ExternalLink } from "lucide-react";
 import {
   createTaskAction,
   setTaskStatusAction,
@@ -17,6 +17,23 @@ import { cn } from "@/lib/utils";
 
 type Node = Task & { children: Node[] };
 const MAX_DEPTH = 2; // 0=root, 1=child, 2=grandchild — no deeper
+
+function splitTitleUrl(title: string): { text: string; url: string | null } {
+  const m = title.match(/https?:\/\/\S+/i);
+  if (!m) return { text: title, url: null };
+  const url = m[0].replace(/[),.;]+$/, "");
+  let text = title.replace(m[0], "").trim();
+  text = text.replace(/[\s]*[—–\-:][\s]*$/, "").trim();
+  return { text, url };
+}
+
+function urlLabel(url: string): string {
+  try {
+    return new URL(url).host.replace(/^www\./, "");
+  } catch {
+    return "open";
+  }
+}
 
 function buildTree(tasks: Task[]): Node[] {
   const byId = new Map<string, Node>();
@@ -159,24 +176,44 @@ function TaskNode({
         )}
 
         <div className="flex min-w-0 flex-1 items-baseline gap-2">
-          <span className="priv relative text-sm truncate">
-            <span
-              className={cn(
-                "transition-colors duration-300",
-                node.status === "done" && "text-muted-foreground"
-              )}
-            >
-              {node.title}
-            </span>
-            <span
-              aria-hidden
-              className={cn(
-                "pointer-events-none absolute left-0 top-1/2 h-px bg-current origin-left transition-transform duration-300 ease-out",
-                node.status === "done" ? "scale-x-100" : "scale-x-0"
-              )}
-              style={{ width: "100%" }}
-            />
-          </span>
+          {(() => {
+            const { text, url } = splitTitleUrl(node.title);
+            return (
+              <>
+                <span className="priv relative text-sm truncate">
+                  <span
+                    className={cn(
+                      "transition-colors duration-300",
+                      node.status === "done" && "text-muted-foreground"
+                    )}
+                  >
+                    {text}
+                  </span>
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "pointer-events-none absolute left-0 top-1/2 h-px bg-current origin-left transition-transform duration-300 ease-out",
+                      node.status === "done" ? "scale-x-100" : "scale-x-0"
+                    )}
+                    style={{ width: "100%" }}
+                  />
+                </span>
+                {url && (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={url}
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0 inline-flex items-center gap-0.5 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em] text-primary transition-colors hover:bg-primary/20"
+                  >
+                    <ExternalLink className="size-2.5" />
+                    {urlLabel(url)}
+                  </a>
+                )}
+              </>
+            );
+          })()}
           {node.recurrence ? (
             <span className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-primary">
               {describeRecurrence(node.recurrence)}

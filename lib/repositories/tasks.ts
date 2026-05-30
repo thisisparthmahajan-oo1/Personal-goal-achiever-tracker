@@ -10,7 +10,7 @@ import {
   type TaskInstance,
   type TaskStatus,
 } from "@/lib/schemas";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { expandRecurrence, startOfDay } from "@/lib/recurrence";
 
 // Shared local-calendar-day key used across the file so occurrence dates
@@ -536,11 +536,15 @@ export type Streaks = {
 };
 
 /**
- * Compute streaks for a recurring task from its full instance history.
+ * Compute streaks from the routine itself: every day whose weekday is in the
+ * habit's weekdays counts as a routine day. Streaks reward consistency on
+ * those days regardless of when the task object was created.
+ *
+ * Window starts at the earlier of (created_at, earliest completed instance)
+ * so retroactively-logged days count.
  *
  * Rule: an unfinished TODAY does not break the streak — the day is still
- * "decidable." Only a past occurrence that was scheduled-but-not-completed
- * breaks it.
+ * "decidable." Only a past routine day that was missed breaks it.
  */
 export function computeStreaks(
   task: Task,
@@ -549,27 +553,44 @@ export function computeStreaks(
   if (!task.recurrence) {
     return { current: 0, longest: 0, last_completed: null };
   }
-  const today = startOfDay(new Date());
-  const anchor = task.due_date ?? task.created_at;
-  const occurrences = expandRecurrence(task.recurrence, anchor, anchor, today);
-  if (occurrences.length === 0) {
+  const weekdays = getHabitWeekdays(task);
+  if (weekdays.length === 0) {
     return { current: 0, longest: 0, last_completed: null };
   }
 
   const completedSet = new Set<string>();
+  let earliestCompleted: Date | null = null;
   let lastCompleted: Date | null = null;
   for (const i of instances) {
     if (!i.completed_at) continue;
     const d = new Date(i.occurrence_date);
     completedSet.add(dayKey(d));
+    if (!earliestCompleted || d < earliestCompleted) earliestCompleted = d;
     if (!lastCompleted || d > lastCompleted) lastCompleted = d;
   }
 
-  // Longest streak: chronological scan.
+  const originalAnchor = startOfDay(task.due_date ?? task.created_at);
+  const startDate =
+    earliestCompleted && earliestCompleted < originalAnchor
+      ? startOfDay(earliestCompleted)
+      : originalAnchor;
+  const today = startOfDay(new Date());
+
+  const routineDays: Date[] = [];
+  let cursor = startDate;
+  while (cursor <= today) {
+    if (weekdays.includes(cursor.getDay())) routineDays.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
+  if (routineDays.length === 0) {
+    return { current: 0, longest: 0, last_completed: lastCompleted };
+  }
+
+  // Longest run
   let longest = 0;
   let run = 0;
-  for (const occ of occurrences) {
-    if (completedSet.has(dayKey(occ))) {
+  for (const d of routineDays) {
+    if (completedSet.has(dayKey(d))) {
       run++;
       if (run > longest) longest = run;
     } else {
@@ -577,16 +598,15 @@ export function computeStreaks(
     }
   }
 
-  // Current streak: walk backward from today.
-  const desc = [...occurrences].sort((a, b) => +b - +a);
+  // Current streak walking back from today; if today is a routine day and not
+  // yet completed, skip it (still decidable).
+  const desc = [...routineDays].sort((a, b) => +b - +a);
   const todayKey = dayKey(today);
   let startIdx = 0;
   if (
-    desc.length > 0 &&
     dayKey(desc[0]) === todayKey &&
     !completedSet.has(todayKey)
   ) {
-    // Today is an occurrence but not done yet — don't penalize, look back further.
     startIdx = 1;
   }
   let current = 0;

@@ -18,6 +18,7 @@ import { z } from "zod";
 
 import * as goals from "../lib/repositories/goals";
 import * as tasks from "../lib/repositories/tasks";
+import * as todos from "../lib/repositories/todos";
 import {
   Frequency,
   Priority,
@@ -311,6 +312,77 @@ server.registerTool(
       };
     }
     return asText(task);
+  }
+);
+
+// ---------- Daily TODOs ----------
+
+server.registerTool(
+  "list_todos",
+  {
+    title: "List daily TODOs",
+    description:
+      "List daily TODOs. Scope 'open' returns items not yet completed (auto-carry-over). 'completed_today' returns items completed since local midnight. 'all' returns everything. Defaults to 'open'.",
+    inputSchema: {
+      scope: z.enum(["open", "completed_today", "all"]).optional(),
+    },
+  },
+  async ({ scope }) => {
+    const s = scope ?? "open";
+    if (s === "open") return asText(await todos.listOpen());
+    if (s === "completed_today")
+      return asText(await todos.listCompletedOn(new Date()));
+    return asText(await todos.list());
+  }
+);
+
+server.registerTool(
+  "create_todo",
+  {
+    title: "Create daily TODO",
+    description:
+      "Add a daily TODO. These are day-scoped, non-recurring scratchpad items that auto-roll forward until completed or deleted. For recurring rituals use create_task with a recurrence rule under Habits instead.",
+    inputSchema: { title: z.string().min(1).max(300) },
+  },
+  async ({ title }) => {
+    const todo = await todos.create({ title: title.trim() });
+    return asText(todo);
+  }
+);
+
+server.registerTool(
+  "complete_todo",
+  {
+    title: "Complete daily TODO",
+    description:
+      "Mark a TODO as completed (stamps completed_at = now). Pass `completed: false` to re-open.",
+    inputSchema: {
+      id: z.string(),
+      completed: z.boolean().optional(),
+    },
+  },
+  async ({ id, completed }) => {
+    const todo = await todos.setCompleted(id, completed ?? true);
+    if (!todo) {
+      return {
+        content: [{ type: "text", text: `Todo not found: ${id}` }],
+        isError: true,
+      };
+    }
+    return asText(todo);
+  }
+);
+
+server.registerTool(
+  "delete_todo",
+  {
+    title: "Delete daily TODO",
+    description: "Delete a TODO permanently.",
+    inputSchema: { id: z.string() },
+  },
+  async ({ id }) => {
+    const ok = await todos.remove(id);
+    return asText({ ok });
   }
 );
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { formatDistanceToNowStrict, format, subDays, startOfDay } from "date-fns";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { TaskTree } from "@/components/goal/TaskTree";
@@ -25,6 +25,18 @@ const STATUS_STYLE: Record<string, string> = {
     "bg-[oklch(0.74_0.14_175)]/15 text-[oklch(0.85_0.14_175)] border-[oklch(0.74_0.14_175)]/30",
   archived: "bg-muted/40 text-muted-foreground border-border",
 };
+
+function parseSourceUrl(source: string): { href: string; label: string } | null {
+  const trimmed = source.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return null;
+  try {
+    const u = new URL(trimmed);
+    const label = u.host.replace(/^www\./, "");
+    return { href: u.toString(), label };
+  } catch {
+    return null;
+  }
+}
 
 function deltaInLastDays(
   history: ProgressPoint[],
@@ -79,11 +91,28 @@ export default async function GoalDetailPage({
             >
               {goal.status}
             </span>
-            {goal.source && (
-              <span className="priv rounded-full border border-border bg-muted/30 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                {goal.source}
-              </span>
-            )}
+            {goal.source && (() => {
+              const url = parseSourceUrl(goal.source);
+              if (url) {
+                return (
+                  <a
+                    href={url.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={url.href}
+                    className="priv inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-primary transition-colors hover:bg-primary/20"
+                  >
+                    <ExternalLink className="size-2.5" />
+                    {url.label}
+                  </a>
+                );
+              }
+              return (
+                <span className="priv rounded-full border border-border bg-muted/30 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  {goal.source}
+                </span>
+              );
+            })()}
           </div>
           <h1 className="priv text-4xl font-semibold tracking-tight">{goal.title}</h1>
           {goal.description && (

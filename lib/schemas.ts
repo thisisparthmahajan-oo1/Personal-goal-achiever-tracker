@@ -76,6 +76,71 @@ export const TaskPatchSchema = TaskInputSchema.partial().extend({
 });
 export type TaskPatch = z.infer<typeof TaskPatchSchema>;
 
+export const WeightUnit = z.enum(["kg", "lb"]);
+export type WeightUnit = z.infer<typeof WeightUnit>;
+
+export const ExerciseWeightSchema = z.object({
+  _id: z.string(),
+  exercise_key: z.string(),
+  weight: z.number().nonnegative().nullable().default(null),
+  unit: WeightUnit.default("kg"),
+  updated_at: z.coerce.date(),
+});
+export type ExerciseWeight = z.infer<typeof ExerciseWeightSchema>;
+
+export const BookType = z.enum(["fiction", "non-fiction"]);
+export type BookType = z.infer<typeof BookType>;
+
+export const BookStatus = z.enum(["pipelined", "in-progress", "completed"]);
+export type BookStatus = z.infer<typeof BookStatus>;
+
+export const BookEntrySchema = z.object({
+  _id: z.string(),
+  title: z.string().min(1),
+  type: BookType,
+  domains: z.array(z.string()).default([]),
+  status: BookStatus.default("pipelined"),
+  start_date: z.coerce.date().nullable().default(null),
+  end_date: z.coerce.date().nullable().default(null),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type BookEntry = z.infer<typeof BookEntrySchema>;
+
+export const BookEntryInputSchema = BookEntrySchema.omit({
+  _id: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  title: z.string().min(1).max(300),
+});
+export type BookEntryInput = z.infer<typeof BookEntryInputSchema>;
+
+export const BookEntryPatchSchema = BookEntryInputSchema.partial();
+export type BookEntryPatch = z.infer<typeof BookEntryPatchSchema>;
+
+export const TodoSchema = z.object({
+  _id: z.string(),
+  title: z.string().min(1),
+  completed_at: z.coerce.date().nullable().default(null),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type Todo = z.infer<typeof TodoSchema>;
+
+export const TodoInputSchema = TodoSchema.omit({
+  _id: true,
+  completed_at: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  title: z.string().min(1).max(300),
+});
+export type TodoInput = z.infer<typeof TodoInputSchema>;
+
+export const TodoPatchSchema = TodoInputSchema.partial();
+export type TodoPatch = z.infer<typeof TodoPatchSchema>;
+
 export const TaskInstanceSchema = z.object({
   _id: z.string(),
   task_id: z.string(),
