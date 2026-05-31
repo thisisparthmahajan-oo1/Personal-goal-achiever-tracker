@@ -24,6 +24,11 @@ export async function renameTodoAction(id: string, title: string) {
   revalidatePath("/todos");
 }
 
+export async function setTodoNotesAction(id: string, notes: string) {
+  await todos.updateNotes(id, notes);
+  revalidatePath("/todos");
+}
+
 export async function deleteTodoAction(id: string) {
   await todos.remove(id);
   revalidatePath("/todos");

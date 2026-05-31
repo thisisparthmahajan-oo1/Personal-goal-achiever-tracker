@@ -122,6 +122,7 @@ export type BookEntryPatch = z.infer<typeof BookEntryPatchSchema>;
 export const TodoSchema = z.object({
   _id: z.string(),
   title: z.string().min(1),
+  notes: z.string().nullable().default(null),
   completed_at: z.coerce.date().nullable().default(null),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
@@ -130,6 +131,7 @@ export type Todo = z.infer<typeof TodoSchema>;
 
 export const TodoInputSchema = TodoSchema.omit({
   _id: true,
+  notes: true,
   completed_at: true,
   created_at: true,
   updated_at: true,

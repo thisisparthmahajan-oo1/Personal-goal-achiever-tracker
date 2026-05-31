@@ -54,6 +54,7 @@ export async function create(input: TodoInput): Promise<Todo> {
   const todo: Todo = {
     _id: randomUUID(),
     title: input.title,
+    notes: null,
     completed_at: null,
     created_at: now,
     updated_at: now,
@@ -84,6 +85,20 @@ export async function updateTitle(
   const result = await col.findOneAndUpdate(
     { _id: id } as Filter<Todo>,
     { $set: { title, updated_at: new Date() } },
+    { returnDocument: "after" }
+  );
+  return result ? TodoSchema.parse(result) : null;
+}
+
+export async function updateNotes(
+  id: string,
+  notes: string | null
+): Promise<Todo | null> {
+  const col = await collection();
+  const trimmed = notes && notes.trim().length > 0 ? notes : null;
+  const result = await col.findOneAndUpdate(
+    { _id: id } as Filter<Todo>,
+    { $set: { notes: trimmed, updated_at: new Date() } },
     { returnDocument: "after" }
   );
   return result ? TodoSchema.parse(result) : null;
