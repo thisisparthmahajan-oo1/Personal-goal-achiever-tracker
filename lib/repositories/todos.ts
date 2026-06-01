@@ -29,6 +29,18 @@ export async function listOpen(): Promise<Todo[]> {
   return docs.map((d) => TodoSchema.parse(d));
 }
 
+export async function listCompletedBetween(
+  from: Date,
+  to: Date
+): Promise<Todo[]> {
+  const col = await collection();
+  const docs = await col
+    .find({ completed_at: { $gte: from, $lt: to } } as Filter<Todo>)
+    .sort({ completed_at: -1 })
+    .toArray();
+  return docs.map((d) => TodoSchema.parse(d));
+}
+
 export async function listCompletedOn(date: Date): Promise<Todo[]> {
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);
