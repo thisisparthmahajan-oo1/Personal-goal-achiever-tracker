@@ -14,6 +14,6 @@ export async function setExerciseWeightAction(input: {
     weight: input.weight,
     unit: WeightUnit.parse(input.unit),
   });
-  revalidatePath("/notes/gym");
-  revalidatePath("/notes/gym/[day]", "page");
+  revalidatePath("/library/gym");
+  revalidatePath("/library/gym/[day]", "page");
 }

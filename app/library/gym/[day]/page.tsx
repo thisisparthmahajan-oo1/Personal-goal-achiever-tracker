@@ -23,7 +23,7 @@ export default async function GymDayPage({
   return (
     <div className="mx-auto max-w-5xl px-8 py-10">
       <Link
-        href="/notes/gym"
+        href="/library/gym"
         className="inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
       >
         <ChevronLeft className="size-3.5" />
@@ -33,7 +33,7 @@ export default async function GymDayPage({
       <header className="mt-6 mb-10">
         <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
           <span className="text-primary">●</span>
-          <span className="ml-2">Notes / Gym / Day {day.number}</span>
+          <span className="ml-2">Library / Gym / Day {day.number}</span>
         </p>
         <h1 className="mt-2 text-4xl font-semibold tracking-tight">
           Day {day.number} — {day.title}
@@ -89,7 +89,7 @@ export default async function GymDayPage({
         {otherDays.map((d) => (
           <Link
             key={d.slug}
-            href={`/notes/gym/${d.slug}`}
+            href={`/library/gym/${d.slug}`}
             className="inline-flex items-center gap-2 rounded-lg border border-border/40 bg-card/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
           >
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60">

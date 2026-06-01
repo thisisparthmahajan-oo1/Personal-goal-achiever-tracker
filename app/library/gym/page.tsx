@@ -8,17 +8,17 @@ export default function GymPage() {
   return (
     <div className="mx-auto max-w-5xl px-8 py-10">
       <Link
-        href="/notes"
+        href="/library"
         className="inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
       >
         <ChevronLeft className="size-3.5" />
-        Notes
+        Library
       </Link>
 
       <header className="mt-6 mb-8">
         <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground mb-2">
           <span className="text-primary">●</span>
-          <span className="ml-2">Notes / Gym</span>
+          <span className="ml-2">Library / Gym</span>
         </p>
         <h1 className="text-4xl font-semibold tracking-tight">4-day split</h1>
         <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
@@ -32,7 +32,7 @@ export default function GymPage() {
         {GYM_PLAN.map((d) => (
           <Link
             key={d.slug}
-            href={`/notes/gym/${d.slug}`}
+            href={`/library/gym/${d.slug}`}
             className="group relative isolate flex flex-col gap-4 overflow-hidden rounded-2xl border border-border/40 bg-card/60 p-6 backdrop-blur-xl transition-all duration-300 hover:border-primary/40 hover:bg-card/80"
             style={{ boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.05)" }}
           >

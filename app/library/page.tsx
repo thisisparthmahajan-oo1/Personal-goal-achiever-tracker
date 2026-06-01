@@ -4,21 +4,21 @@ import { list as listBooks } from "@/lib/repositories/books";
 
 export const dynamic = "force-dynamic";
 
-export default async function NotesIndexPage() {
+export default async function LibraryIndexPage() {
   const books = await listBooks();
   const inProgress = books.filter((b) => b.status === "in-progress").length;
   const completed = books.filter((b) => b.status === "completed").length;
 
   const tiles = [
     {
-      href: "/notes/gym",
+      href: "/library/gym",
       label: "Gym",
       sublabel: "4-day split",
       icon: Dumbbell,
       meta: "Day 1 · Day 2 · Day 3 · Day 4",
     },
     {
-      href: "/notes/books",
+      href: "/library/books",
       label: "Books",
       sublabel: "Reading journal",
       icon: BookOpen,
@@ -31,7 +31,7 @@ export default async function NotesIndexPage() {
       <header className="mb-10">
         <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground mb-2">
           <span className="text-primary">●</span>
-          <span className="ml-2">Notes</span>
+          <span className="ml-2">Library</span>
         </p>
         <h1 className="text-4xl font-semibold tracking-tight">Reference & journals</h1>
         <p className="mt-2 text-sm text-muted-foreground">

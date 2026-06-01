@@ -15,18 +15,18 @@ export default async function BooksPage() {
   return (
     <div className="mx-auto max-w-6xl px-8 py-10">
       <Link
-        href="/notes"
+        href="/library"
         className="inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
       >
         <ChevronLeft className="size-3.5" />
-        Notes
+        Library
       </Link>
 
       <header className="mt-6 mb-8 flex items-end justify-between gap-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground mb-2">
             <span className="text-primary">●</span>
-            <span className="ml-2">Notes / Books</span>
+            <span className="ml-2">Library / Books</span>
           </p>
           <h1 className="text-4xl font-semibold tracking-tight">Books to read</h1>
           <p className="priv mt-2 text-sm text-muted-foreground">

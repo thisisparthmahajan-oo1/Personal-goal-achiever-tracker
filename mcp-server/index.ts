@@ -19,8 +19,10 @@ import { z } from "zod";
 import * as goals from "../lib/repositories/goals";
 import * as tasks from "../lib/repositories/tasks";
 import * as todos from "../lib/repositories/todos";
+import * as goalNotes from "../lib/repositories/goal-notes";
 import {
   Frequency,
+  GoalNoteKind,
   Priority,
   RecurrenceRuleSchema,
   Status,
@@ -382,6 +384,92 @@ server.registerTool(
   },
   async ({ id }) => {
     const ok = await todos.remove(id);
+    return asText({ ok });
+  }
+);
+
+// ---------- Goal Notes ----------
+
+server.registerTool(
+  "list_goal_notes",
+  {
+    title: "List goal notes",
+    description:
+      "List notes captured under a goal, newest first. Optional kind filter ('personal' | 'office').",
+    inputSchema: {
+      goal_id: z.string(),
+      kind: GoalNoteKind.optional(),
+    },
+  },
+  async ({ goal_id, kind }) => {
+    return asText(
+      await goalNotes.listForGoal(goal_id, kind ? { kind } : undefined)
+    );
+  }
+);
+
+server.registerTool(
+  "create_goal_note",
+  {
+    title: "Create goal note",
+    description:
+      "Add a note under a goal. Optionally link the note to a specific task or subtask within that goal via `task_id` so future browsing knows which task the insight relates to. `kind` distinguishes personal vs office context.",
+    inputSchema: {
+      goal_id: z.string(),
+      task_id: z.string().nullable().optional(),
+      kind: GoalNoteKind.default("personal"),
+      body: z.string().min(1).max(10000),
+    },
+  },
+  async ({ goal_id, task_id, kind, body }) => {
+    const note = await goalNotes.create({
+      goal_id,
+      task_id: task_id ?? null,
+      kind: kind ?? "personal",
+      body,
+    });
+    return asText(note);
+  }
+);
+
+server.registerTool(
+  "update_goal_note",
+  {
+    title: "Update goal note",
+    description:
+      "Patch a goal note. Any of body, kind, task_id can be updated. Pass `task_id: null` to unlink from a task.",
+    inputSchema: {
+      id: z.string(),
+      body: z.string().min(1).max(10000).optional(),
+      kind: GoalNoteKind.optional(),
+      task_id: z.string().nullable().optional(),
+    },
+  },
+  async ({ id, body, kind, task_id }) => {
+    const patch: Record<string, unknown> = {};
+    if (body !== undefined) patch.body = body;
+    if (kind !== undefined) patch.kind = kind;
+    if (task_id !== undefined) patch.task_id = task_id;
+    const note = await goalNotes.update(id, patch);
+    if (!note) {
+      return {
+        content: [{ type: "text", text: `Goal note not found: ${id}` }],
+        isError: true,
+      };
+    }
+    return asText(note);
+  }
+);
+
+server.registerTool(
+  "delete_goal_note",
+  {
+    title: "Delete goal note",
+    description: "Delete a goal note permanently.",
+    inputSchema: { id: z.string() },
+  },
+  async ({ id }) => {
+    const ok = await goalNotes.remove(id);
     return asText({ ok });
   }
 );

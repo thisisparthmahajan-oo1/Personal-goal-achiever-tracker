@@ -32,8 +32,8 @@ export async function createBookAction(input: {
     start_date: parseDate(input.start_date),
     end_date: parseDate(input.end_date),
   });
-  revalidatePath("/notes/books");
-  revalidatePath("/notes");
+  revalidatePath("/library/books");
+  revalidatePath("/library");
 }
 
 export async function setBookStatusAction(id: string, status: BookStatusT) {
@@ -51,7 +51,7 @@ export async function setBookStatusAction(id: string, status: BookStatusT) {
     if (!existing.end_date) patch.end_date = now;
   }
   await books.update(id, patch);
-  revalidatePath("/notes/books");
+  revalidatePath("/library/books");
 }
 
 export async function setBookFieldAction(
@@ -72,11 +72,11 @@ export async function setBookFieldAction(
   if (patch.start_date !== undefined) next.start_date = parseDate(patch.start_date);
   if (patch.end_date !== undefined) next.end_date = parseDate(patch.end_date);
   await books.update(id, next);
-  revalidatePath("/notes/books");
+  revalidatePath("/library/books");
 }
 
 export async function deleteBookAction(id: string) {
   await books.remove(id);
-  revalidatePath("/notes/books");
-  revalidatePath("/notes");
+  revalidatePath("/library/books");
+  revalidatePath("/library");
 }

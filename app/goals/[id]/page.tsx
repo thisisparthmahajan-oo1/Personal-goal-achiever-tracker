@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { ChevronLeft, Pencil, Trash2, ExternalLink, NotebookText } from "lucide-react";
 import { formatDistanceToNowStrict, format, subDays, startOfDay } from "date-fns";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { TaskTree } from "@/components/goal/TaskTree";
@@ -15,6 +15,12 @@ import {
   computeGoalProgress,
   type ProgressPoint,
 } from "@/lib/repositories/tasks";
+import {
+  listRecentForGoal as listRecentNotes,
+  countForGoal as countGoalNotes,
+} from "@/lib/repositories/goal-notes";
+import { QuickAddGoalNote } from "@/components/goal/QuickAddGoalNote";
+import { GoalNotesPreview } from "@/components/goal/GoalNotesPreview";
 import { deleteGoalAction } from "@/app/actions/goals";
 
 export const dynamic = "force-dynamic";
@@ -56,12 +62,15 @@ export default async function GoalDetailPage({
   const { id } = await params;
   const today = startOfDay(new Date());
   const rangeStart = subDays(today, 6);
-  const [goal, tasks, occurrences, history] = await Promise.all([
-    getGoal(id),
-    listTasks({ goal_id: id }),
-    getOccurrencesForGoal(id, rangeStart, today),
-    getProgressHistory(id),
-  ]);
+  const [goal, tasks, occurrences, history, recentNotes, notesCount] =
+    await Promise.all([
+      getGoal(id),
+      listTasks({ goal_id: id }),
+      getOccurrencesForGoal(id, rangeStart, today),
+      getProgressHistory(id),
+      listRecentNotes(id, 3),
+      countGoalNotes(id),
+    ]);
   if (!goal) notFound();
 
   const { progress_pct, planned_pct } = computeGoalProgress(tasks);
@@ -136,6 +145,18 @@ export default async function GoalDetailPage({
         </div>
         <div className="flex shrink-0 gap-2">
           <PrivacyEye id={goal._id} />
+          <Link
+            href={`/goals/${goal._id}/notes`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            <NotebookText className="size-4" />
+            Notes
+            {notesCount > 0 && (
+              <span className="priv ml-1 font-mono text-[10px] tabular-nums text-muted-foreground">
+                {notesCount}
+              </span>
+            )}
+          </Link>
           <Link
             href={`/goals/${goal._id}/edit`}
             className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -246,6 +267,25 @@ export default async function GoalDetailPage({
           </div>
         </Panel>
       </div>
+
+      <section className="mt-10">
+        <h2 className="mb-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+          <span
+            className="size-1 rounded-full bg-primary"
+            style={{ boxShadow: "0 0 6px oklch(0.66 0.22 285)" }}
+          />
+          Notes
+        </h2>
+        <div className="space-y-3">
+          <QuickAddGoalNote goalId={goal._id} tasks={tasks} />
+          <GoalNotesPreview
+            goalId={goal._id}
+            notes={recentNotes}
+            totalCount={notesCount}
+            tasks={tasks}
+          />
+        </div>
+      </section>
     </PrivacyScope>
   );
 }

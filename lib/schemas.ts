@@ -143,6 +143,32 @@ export type TodoInput = z.infer<typeof TodoInputSchema>;
 export const TodoPatchSchema = TodoInputSchema.partial();
 export type TodoPatch = z.infer<typeof TodoPatchSchema>;
 
+export const GoalNoteKind = z.enum(["personal", "office"]);
+export type GoalNoteKind = z.infer<typeof GoalNoteKind>;
+
+export const GoalNoteSchema = z.object({
+  _id: z.string(),
+  goal_id: z.string(),
+  task_id: z.string().nullable().default(null),
+  kind: GoalNoteKind.default("personal"),
+  body: z.string().min(1),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type GoalNote = z.infer<typeof GoalNoteSchema>;
+
+export const GoalNoteInputSchema = GoalNoteSchema.omit({
+  _id: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  body: z.string().min(1).max(10000),
+});
+export type GoalNoteInput = z.infer<typeof GoalNoteInputSchema>;
+
+export const GoalNotePatchSchema = GoalNoteInputSchema.partial();
+export type GoalNotePatch = z.infer<typeof GoalNotePatchSchema>;
+
 export const TaskInstanceSchema = z.object({
   _id: z.string(),
   task_id: z.string(),

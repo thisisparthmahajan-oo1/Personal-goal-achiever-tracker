@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Target, FileText, Repeat, LayoutGrid, ListTodo, Settings } from "lucide-react";
+import { Target, Library, Repeat, LayoutGrid, ListTodo, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Item = {
@@ -16,7 +16,7 @@ const ITEMS: Item[] = [
   { href: "/", label: "Goals", icon: Target, enabled: true },
   { href: "/habits", label: "Habits", icon: Repeat, enabled: true },
   { href: "/todos", label: "Daily TODOs", icon: ListTodo, enabled: true },
-  { href: "/notes", label: "Notes", icon: FileText, enabled: true },
+  { href: "/library", label: "Library", icon: Library, enabled: true },
   { href: "/aggregator", label: "Aggregator", icon: LayoutGrid, enabled: false },
 ];
 
