@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Filter } from "mongodb";
-import { getDb } from "@/lib/db";
+import { getCollection } from "@/lib/db";
+import { getActiveProfileId } from "@/lib/profile";
 import {
   ExerciseWeightSchema,
   type ExerciseWeight,
@@ -10,8 +11,7 @@ import {
 const COLLECTION = "exercise_weights";
 
 async function collection() {
-  const db = await getDb();
-  return db.collection<ExerciseWeight>(COLLECTION);
+  return getCollection<ExerciseWeight>(COLLECTION);
 }
 
 export async function list(): Promise<ExerciseWeight[]> {
@@ -51,8 +51,10 @@ export async function upsert(input: {
     );
     return ExerciseWeightSchema.parse(result);
   }
+  const profileId = await getActiveProfileId();
   const entry: ExerciseWeight = {
     _id: randomUUID(),
+    profile_id: profileId,
     exercise_key: input.exercise_key,
     weight: input.weight,
     unit: input.unit,

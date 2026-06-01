@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Filter } from "mongodb";
-import { getDb } from "@/lib/db";
+import { getCollection } from "@/lib/db";
+import { getActiveProfileId } from "@/lib/profile";
 import {
   BookEntrySchema,
   type BookEntry,
@@ -11,8 +12,7 @@ import {
 const COLLECTION = "book_entries";
 
 async function collection() {
-  const db = await getDb();
-  return db.collection<BookEntry>(COLLECTION);
+  return getCollection<BookEntry>(COLLECTION);
 }
 
 export async function list(): Promise<BookEntry[]> {
@@ -30,8 +30,10 @@ export async function get(id: string): Promise<BookEntry | null> {
 export async function create(input: BookEntryInput): Promise<BookEntry> {
   const col = await collection();
   const now = new Date();
+  const profileId = await getActiveProfileId();
   const entry: BookEntry = {
     _id: randomUUID(),
+    profile_id: profileId,
     title: input.title,
     type: input.type,
     domains: input.domains ?? [],

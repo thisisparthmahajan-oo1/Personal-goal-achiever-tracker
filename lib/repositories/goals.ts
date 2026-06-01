@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Filter } from "mongodb";
-import { getDb } from "@/lib/db";
+import { getCollection } from "@/lib/db";
+import { getActiveProfileId } from "@/lib/profile";
 import {
   GoalSchema,
   TaskSchema,
@@ -10,6 +11,7 @@ import {
   type GoalSummary,
   type Status,
   type Task,
+  type TaskInstance,
 } from "@/lib/schemas";
 import {
   computeGoalProgress,
@@ -19,8 +21,7 @@ import {
 const COLLECTION = "goals";
 
 async function collection() {
-  const db = await getDb();
-  return db.collection<Goal>(COLLECTION);
+  return getCollection<Goal>(COLLECTION);
 }
 
 export async function list(filter?: { status?: Status }): Promise<Goal[]> {
@@ -39,8 +40,10 @@ export async function get(id: string): Promise<Goal | null> {
 export async function create(input: GoalInput): Promise<Goal> {
   const col = await collection();
   const now = new Date();
+  const profileId = await getActiveProfileId();
   const goal: Goal = {
     _id: randomUUID(),
+    profile_id: profileId,
     title: input.title,
     description: input.description ?? null,
     target_date: input.target_date ?? null,
@@ -68,18 +71,19 @@ export async function update(id: string, patch: GoalPatch): Promise<Goal | null>
 }
 
 export async function remove(id: string): Promise<boolean> {
-  const db = await getDb();
+  const goalsCol = await collection();
+  const tasksCol = await getCollection<Task>("tasks");
+  const instancesCol = await getCollection<TaskInstance>("task_instances");
   const taskIds = (
-    await db
-      .collection<Task>("tasks")
+    await tasksCol
       .find({ goal_id: id }, { projection: { _id: 1 } })
       .toArray()
   ).map((t) => t._id);
   if (taskIds.length > 0) {
-    await db.collection("task_instances").deleteMany({ task_id: { $in: taskIds } });
+    await instancesCol.deleteMany({ task_id: { $in: taskIds } } as Filter<TaskInstance>);
   }
-  await db.collection("tasks").deleteMany({ goal_id: id });
-  const result = await db.collection<Goal>(COLLECTION).deleteOne({ _id: id } as Filter<Goal>);
+  await tasksCol.deleteMany({ goal_id: id } as Filter<Task>);
+  const result = await goalsCol.deleteOne({ _id: id } as Filter<Goal>);
   return result.deletedCount === 1;
 }
 
@@ -91,10 +95,9 @@ export async function remove(id: string): Promise<boolean> {
 export async function getDashboardSummary(): Promise<GoalSummary[]> {
   const goals = await list({ status: "active" });
   if (goals.length === 0) return [];
-  const db = await getDb();
-  const tasks = await db
-    .collection<Task>("tasks")
-    .find({ goal_id: { $in: goals.map((g) => g._id) } })
+  const tasksCol = await getCollection<Task>("tasks");
+  const tasks = await tasksCol
+    .find({ goal_id: { $in: goals.map((g) => g._id) } } as Filter<Task>)
     .toArray();
   const tasksByGoal = new Map<string, Task[]>();
   for (const t of tasks) {
@@ -118,8 +121,8 @@ export async function getDashboardSummary(): Promise<GoalSummary[]> {
 }
 
 export async function getProgressHistory(goalId: string): Promise<ProgressPoint[]> {
-  const db = await getDb();
-  const docs = await db.collection<Task>("tasks").find({ goal_id: goalId }).toArray();
+  const tasksCol = await getCollection<Task>("tasks");
+  const docs = await tasksCol.find({ goal_id: goalId } as Filter<Task>).toArray();
   const tasks = docs.map((d) => TaskSchema.parse(d));
   return computeGoalProgress(tasks).history;
 }

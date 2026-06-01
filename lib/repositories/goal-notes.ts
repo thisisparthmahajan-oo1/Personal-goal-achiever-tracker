@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Filter } from "mongodb";
-import { getDb } from "@/lib/db";
+import { getCollection } from "@/lib/db";
+import { getActiveProfileId } from "@/lib/profile";
 import {
   GoalNoteSchema,
   type GoalNote,
@@ -12,8 +13,7 @@ import {
 const COLLECTION = "goal_notes";
 
 async function collection() {
-  const db = await getDb();
-  return db.collection<GoalNote>(COLLECTION);
+  return getCollection<GoalNote>(COLLECTION);
 }
 
 export async function listForGoal(
@@ -54,8 +54,10 @@ export async function get(id: string): Promise<GoalNote | null> {
 export async function create(input: GoalNoteInput): Promise<GoalNote> {
   const col = await collection();
   const now = new Date();
+  const profileId = await getActiveProfileId();
   const note: GoalNote = {
     _id: randomUUID(),
+    profile_id: profileId,
     goal_id: input.goal_id,
     task_id: input.task_id ?? null,
     kind: input.kind ?? "personal",

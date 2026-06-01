@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Filter } from "mongodb";
-import { getDb } from "@/lib/db";
+import { getCollection } from "@/lib/db";
+import { getActiveProfileId } from "@/lib/profile";
 import {
   TaskSchema,
   TaskInstanceSchema,
@@ -23,13 +24,11 @@ const COLLECTION = "tasks";
 const INSTANCES = "task_instances";
 
 async function collection() {
-  const db = await getDb();
-  return db.collection<Task>(COLLECTION);
+  return getCollection<Task>(COLLECTION);
 }
 
 async function instancesCollection() {
-  const db = await getDb();
-  return db.collection<TaskInstance>(INSTANCES);
+  return getCollection<TaskInstance>(INSTANCES);
 }
 
 // ---------- Validation helpers ----------
@@ -150,8 +149,10 @@ export async function create(input: TaskInput): Promise<Task> {
 
   const col = await collection();
   const now = new Date();
+  const profileId = await getActiveProfileId();
   const task: Task = {
     _id: randomUUID(),
+    profile_id: profileId,
     goal_id: input.goal_id,
     parent_task_id: input.parent_task_id ?? null,
     title: input.title,
@@ -318,8 +319,10 @@ export async function toggleOccurrence(
     );
     return TaskInstanceSchema.parse(result);
   }
+  const profileId = await getActiveProfileId();
   const instance: TaskInstance = {
     _id: randomUUID(),
+    profile_id: profileId,
     task_id: taskId,
     occurrence_date: date,
     completed_at: new Date(),

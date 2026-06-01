@@ -5,11 +5,15 @@
  * Exposes tools to read and write goals, tasks, and check-ins.
  * Talks to the same MongoDB the web app uses.
  *
- * Run via Claude Code MCP config:
+ * Run via Claude Code MCP config (one instance per profile):
  *   "personal-tracker": {
  *     "command": "npx",
- *     "args": ["tsx", "/absolute/path/to/personal-tracker/mcp-server/index.ts"]
- *   }
+ *     "args": ["tsx", "/absolute/path/to/personal-tracker/mcp-server/index.ts"],
+ *     "env": { "TRACKER_PROFILE_SLUG": "personal" }
+ *   },
+ *   "office-tracker": { ..., "env": { "TRACKER_PROFILE_SLUG": "office" } }
+ *
+ * Without TRACKER_PROFILE_SLUG the server defaults to the "personal" profile.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -480,7 +484,10 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // Log to stderr so stdout stays clean for the MCP protocol.
-  console.error("personal-tracker MCP server connected");
+  const profileSlug = process.env.TRACKER_PROFILE_SLUG ?? "personal";
+  console.error(
+    `personal-tracker MCP server connected (profile=${profileSlug})`
+  );
 }
 
 main().catch((err) => {

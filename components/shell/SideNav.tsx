@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Target, Library, Repeat, LayoutGrid, ListTodo, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ProfileSwitcher } from "./ProfileSwitcher";
+import type { Profile } from "@/lib/schemas";
 
 type Item = {
   href: string;
@@ -20,23 +22,34 @@ const ITEMS: Item[] = [
   { href: "/aggregator", label: "Aggregator", icon: LayoutGrid, enabled: false },
 ];
 
-export function SideNav() {
+export function SideNav({
+  profiles,
+  activeSlug,
+}: {
+  profiles: Profile[];
+  activeSlug: string;
+}) {
   const pathname = usePathname();
   return (
     <nav className="flex h-full flex-col">
-      <Link href="/" className="flex h-14 items-center gap-2.5 border-b border-border/30 px-5">
-        <div className="relative size-7 rounded-md bg-gradient-to-br from-primary to-[oklch(0.74_0.14_175)] shadow-[0_0_20px_oklch(0.66_0.22_285/0.5)]">
-          <div className="absolute inset-0 flex items-center justify-center text-[12px] font-bold text-white">
-            T
+      <div className="flex h-14 items-center gap-2.5 border-b border-border/30 px-5">
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="relative size-7 rounded-md bg-gradient-to-br from-primary to-[oklch(0.74_0.14_175)] shadow-[0_0_20px_oklch(0.66_0.22_285/0.5)]">
+            <div className="absolute inset-0 flex items-center justify-center text-[12px] font-bold text-white">
+              T
+            </div>
           </div>
-        </div>
-        <div className="flex flex-col leading-none">
-          <span className="text-[13px] font-semibold tracking-[0.14em]">TRACKER</span>
-          <span className="mt-0.5 text-[8px] uppercase tracking-[0.24em] text-muted-foreground">
-            personal
-          </span>
-        </div>
-      </Link>
+          <div className="flex flex-col leading-none">
+            <span className="text-[13px] font-semibold tracking-[0.14em]">TRACKER</span>
+            <span className="mt-0.5 text-[8px] uppercase tracking-[0.24em] text-muted-foreground">
+              personal tracker
+            </span>
+          </div>
+        </Link>
+      </div>
+      <div className="border-b border-border/30 px-3 py-2">
+        <ProfileSwitcher profiles={profiles} activeSlug={activeSlug} />
+      </div>
 
       <ul className="space-y-0.5 px-3 py-4">
         {ITEMS.map((item) => {

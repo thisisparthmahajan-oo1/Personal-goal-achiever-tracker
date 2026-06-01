@@ -20,8 +20,22 @@ export const RecurrenceRuleSchema = z.object({
 });
 export type RecurrenceRule = z.infer<typeof RecurrenceRuleSchema>;
 
+export const ProfileKind = z.enum(["personal", "office"]);
+export type ProfileKind = z.infer<typeof ProfileKind>;
+
+export const ProfileSchema = z.object({
+  _id: z.string(),
+  slug: z.string().min(1),
+  name: z.string().min(1),
+  kind: ProfileKind,
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type Profile = z.infer<typeof ProfileSchema>;
+
 export const GoalSchema = z.object({
   _id: z.string(),
+  profile_id: z.string(),
   title: z.string().min(1),
   description: z.string().nullable().default(null),
   target_date: z.coerce.date().nullable().default(null),
@@ -34,6 +48,7 @@ export type Goal = z.infer<typeof GoalSchema>;
 
 export const GoalInputSchema = GoalSchema.omit({
   _id: true,
+  profile_id: true,
   created_at: true,
   updated_at: true,
 }).extend({
@@ -46,6 +61,7 @@ export type GoalPatch = z.infer<typeof GoalPatchSchema>;
 
 export const TaskSchema = z.object({
   _id: z.string(),
+  profile_id: z.string(),
   goal_id: z.string().nullable().default(null),
   parent_task_id: z.string().nullable().default(null),
   title: z.string().min(1),
@@ -63,6 +79,7 @@ export type Task = z.infer<typeof TaskSchema>;
 
 export const TaskInputSchema = TaskSchema.omit({
   _id: true,
+  profile_id: true,
   completed_at: true,
   created_at: true,
   updated_at: true,
@@ -81,6 +98,7 @@ export type WeightUnit = z.infer<typeof WeightUnit>;
 
 export const ExerciseWeightSchema = z.object({
   _id: z.string(),
+  profile_id: z.string(),
   exercise_key: z.string(),
   weight: z.number().nonnegative().nullable().default(null),
   unit: WeightUnit.default("kg"),
@@ -96,6 +114,7 @@ export type BookStatus = z.infer<typeof BookStatus>;
 
 export const BookEntrySchema = z.object({
   _id: z.string(),
+  profile_id: z.string(),
   title: z.string().min(1),
   type: BookType,
   domains: z.array(z.string()).default([]),
@@ -109,6 +128,7 @@ export type BookEntry = z.infer<typeof BookEntrySchema>;
 
 export const BookEntryInputSchema = BookEntrySchema.omit({
   _id: true,
+  profile_id: true,
   created_at: true,
   updated_at: true,
 }).extend({
@@ -121,6 +141,7 @@ export type BookEntryPatch = z.infer<typeof BookEntryPatchSchema>;
 
 export const TodoSchema = z.object({
   _id: z.string(),
+  profile_id: z.string(),
   title: z.string().min(1),
   notes: z.string().nullable().default(null),
   completed_at: z.coerce.date().nullable().default(null),
@@ -131,6 +152,7 @@ export type Todo = z.infer<typeof TodoSchema>;
 
 export const TodoInputSchema = TodoSchema.omit({
   _id: true,
+  profile_id: true,
   notes: true,
   completed_at: true,
   created_at: true,
@@ -148,6 +170,7 @@ export type GoalNoteKind = z.infer<typeof GoalNoteKind>;
 
 export const GoalNoteSchema = z.object({
   _id: z.string(),
+  profile_id: z.string(),
   goal_id: z.string(),
   task_id: z.string().nullable().default(null),
   kind: GoalNoteKind.default("personal"),
@@ -159,6 +182,7 @@ export type GoalNote = z.infer<typeof GoalNoteSchema>;
 
 export const GoalNoteInputSchema = GoalNoteSchema.omit({
   _id: true,
+  profile_id: true,
   created_at: true,
   updated_at: true,
 }).extend({
@@ -171,6 +195,7 @@ export type GoalNotePatch = z.infer<typeof GoalNotePatchSchema>;
 
 export const TaskInstanceSchema = z.object({
   _id: z.string(),
+  profile_id: z.string(),
   task_id: z.string(),
   occurrence_date: z.coerce.date(),
   completed_at: z.coerce.date().nullable().default(null),

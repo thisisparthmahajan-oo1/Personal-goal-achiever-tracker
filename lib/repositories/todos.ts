@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Filter } from "mongodb";
-import { getDb } from "@/lib/db";
+import { getCollection } from "@/lib/db";
+import { getActiveProfileId } from "@/lib/profile";
 import {
   TodoSchema,
   type Todo,
@@ -10,8 +11,7 @@ import {
 const COLLECTION = "todos";
 
 async function collection() {
-  const db = await getDb();
-  return db.collection<Todo>(COLLECTION);
+  return getCollection<Todo>(COLLECTION);
 }
 
 export async function list(): Promise<Todo[]> {
@@ -63,8 +63,10 @@ export async function get(id: string): Promise<Todo | null> {
 export async function create(input: TodoInput): Promise<Todo> {
   const col = await collection();
   const now = new Date();
+  const profileId = await getActiveProfileId();
   const todo: Todo = {
     _id: randomUUID(),
+    profile_id: profileId,
     title: input.title,
     notes: null,
     completed_at: null,
