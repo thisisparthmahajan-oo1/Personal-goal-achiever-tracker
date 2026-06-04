@@ -19,8 +19,10 @@ import {
   listRecentForGoal as listRecentNotes,
   countForGoal as countGoalNotes,
 } from "@/lib/repositories/goal-notes";
+import { listForGoal as listGoalResources } from "@/lib/repositories/goal-resources";
 import { QuickAddGoalNote } from "@/components/goal/QuickAddGoalNote";
 import { GoalNotesPreview } from "@/components/goal/GoalNotesPreview";
+import { GoalResources } from "@/components/goal/GoalResources";
 import { deleteGoalAction } from "@/app/actions/goals";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +64,7 @@ export default async function GoalDetailPage({
   const { id } = await params;
   const today = startOfDay(new Date());
   const rangeStart = subDays(today, 6);
-  const [goal, tasks, occurrences, history, recentNotes, notesCount] =
+  const [goal, tasks, occurrences, history, recentNotes, notesCount, resources] =
     await Promise.all([
       getGoal(id),
       listTasks({ goal_id: id }),
@@ -70,6 +72,7 @@ export default async function GoalDetailPage({
       getProgressHistory(id),
       listRecentNotes(id, 3),
       countGoalNotes(id),
+      listGoalResources(id),
     ]);
   if (!goal) notFound();
 
@@ -267,6 +270,17 @@ export default async function GoalDetailPage({
           </div>
         </Panel>
       </div>
+
+      <section className="mt-10">
+        <h2 className="mb-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+          <span
+            className="size-1 rounded-full bg-primary"
+            style={{ boxShadow: "0 0 6px oklch(0.66 0.22 285)" }}
+          />
+          Resources
+        </h2>
+        <GoalResources goalId={goal._id} resources={resources} />
+      </section>
 
       <section className="mt-10">
         <h2 className="mb-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-muted-foreground">

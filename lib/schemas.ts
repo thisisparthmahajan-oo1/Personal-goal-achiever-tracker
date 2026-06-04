@@ -193,6 +193,31 @@ export type GoalNoteInput = z.infer<typeof GoalNoteInputSchema>;
 export const GoalNotePatchSchema = GoalNoteInputSchema.partial();
 export type GoalNotePatch = z.infer<typeof GoalNotePatchSchema>;
 
+export const GoalResourceSchema = z.object({
+  _id: z.string(),
+  profile_id: z.string(),
+  goal_id: z.string(),
+  label: z.string().min(1),
+  url: z.string().min(1),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type GoalResource = z.infer<typeof GoalResourceSchema>;
+
+export const GoalResourceInputSchema = GoalResourceSchema.omit({
+  _id: true,
+  profile_id: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  label: z.string().min(1).max(100),
+  url: z.string().min(1).max(2000),
+});
+export type GoalResourceInput = z.infer<typeof GoalResourceInputSchema>;
+
+export const GoalResourcePatchSchema = GoalResourceInputSchema.partial();
+export type GoalResourcePatch = z.infer<typeof GoalResourcePatchSchema>;
+
 export const TaskInstanceSchema = z.object({
   _id: z.string(),
   profile_id: z.string(),

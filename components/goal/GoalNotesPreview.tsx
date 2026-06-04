@@ -3,6 +3,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { NotebookText } from "lucide-react";
 import type { GoalNote, Task } from "@/lib/schemas";
 import { KindChip } from "./GoalNoteChips";
+import { NotePreviewBody } from "./NotePreviewBody";
 
 export function GoalNotesPreview({
   goalId,
@@ -49,9 +50,7 @@ export function GoalNotesPreview({
                 {formatDistanceToNowStrict(n.created_at, { addSuffix: true })}
               </span>
             </div>
-            <p className="priv whitespace-pre-wrap text-sm text-foreground/90 line-clamp-3">
-              {n.body}
-            </p>
+            <NotePreviewBody body={n.body} />
           </div>
         );
       })}

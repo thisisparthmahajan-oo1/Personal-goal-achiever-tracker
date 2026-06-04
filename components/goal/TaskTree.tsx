@@ -143,6 +143,7 @@ function TaskNode({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [titleExpanded, setTitleExpanded] = useState(false);
   const hasChildren = node.children.length > 0;
   const canAddSubtask = depth < MAX_DEPTH && !node.recurrence;
   const childRemaining = node.recurrence ? 0 : node.weight - siblingWeightSum(allTasks, node._id);
@@ -180,7 +181,22 @@ function TaskNode({
             const { text, url } = splitTitleUrl(node.title);
             return (
               <>
-                <span className="priv relative text-sm truncate">
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setTitleExpanded((v) => !v)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setTitleExpanded((v) => !v);
+                    }
+                  }}
+                  title={titleExpanded ? "Click to collapse" : text}
+                  className={cn(
+                    "priv relative cursor-pointer text-sm",
+                    titleExpanded ? "break-words" : "truncate"
+                  )}
+                >
                   <span
                     className={cn(
                       "transition-colors duration-300",
@@ -445,8 +461,10 @@ function AddTaskInline({
   if (!open) {
     if (remaining <= 0) {
       return (
-        <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground/70 italic">
-          {parentId ? "Parent budget filled" : "100% allocated"}
+        <p className="text-[11px] text-muted-foreground/70 italic">
+          {parentId
+            ? "Parent budget filled — reduce a subtask weight (click its % pill) to add another."
+            : "100% allocated — reduce a task weight (click its % pill) to add another."}
         </p>
       );
     }
