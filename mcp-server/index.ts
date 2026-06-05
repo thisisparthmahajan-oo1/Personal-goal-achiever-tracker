@@ -24,6 +24,7 @@ import * as goals from "../lib/repositories/goals";
 import * as tasks from "../lib/repositories/tasks";
 import * as todos from "../lib/repositories/todos";
 import * as goalNotes from "../lib/repositories/goal-notes";
+import * as stash from "../lib/repositories/stash";
 import {
   Frequency,
   GoalNoteKind,
@@ -474,6 +475,61 @@ server.registerTool(
   },
   async ({ id }) => {
     const ok = await goalNotes.remove(id);
+    return asText({ ok });
+  }
+);
+
+// ---------- Stash ----------
+
+server.registerTool(
+  "list_stash",
+  {
+    title: "List stash items",
+    description:
+      "List ad-hoc stashed links (Library → Stash), newest first. Optional limit.",
+    inputSchema: { limit: z.number().int().positive().optional() },
+  },
+  async ({ limit }) => {
+    const all = await stash.list();
+    return asText(limit ? all.slice(0, limit) : all);
+  }
+);
+
+server.registerTool(
+  "add_stash",
+  {
+    title: "Add stash item",
+    description:
+      "Save an ad-hoc link to the Library Stash. Use for URLs the user wants to remember but that don't belong to a specific goal. `label` is a short title, `url` is the link (any scheme — https/file/mailto/etc. preserved as-is), `note` is optional one-line context.",
+    inputSchema: {
+      label: z.string().min(1).max(200),
+      url: z.string().min(1).max(2000),
+      note: z.string().max(500).nullable().optional(),
+    },
+  },
+  async ({ label, url, note }) => {
+    const trimmedUrl = url.trim();
+    const normalizedUrl = /^[a-z][a-z0-9+\-.]*:/i.test(trimmedUrl)
+      ? trimmedUrl
+      : `https://${trimmedUrl}`;
+    const item = await stash.create({
+      label: label.trim(),
+      url: normalizedUrl,
+      note: note?.trim() || null,
+    });
+    return asText(item);
+  }
+);
+
+server.registerTool(
+  "delete_stash",
+  {
+    title: "Delete stash item",
+    description: "Remove a stash item permanently.",
+    inputSchema: { id: z.string() },
+  },
+  async ({ id }) => {
+    const ok = await stash.remove(id);
     return asText({ ok });
   }
 );

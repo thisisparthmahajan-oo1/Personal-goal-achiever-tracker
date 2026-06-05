@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Dumbbell, BookOpen, ChevronRight } from "lucide-react";
+import { Dumbbell, BookOpen, Bookmark, ChevronRight } from "lucide-react";
 import { list as listBooks } from "@/lib/repositories/books";
+import { count as countStash } from "@/lib/repositories/stash";
 import { getActiveProfileSlug } from "@/lib/profile";
 import type { ProfileKind } from "@/lib/schemas";
 
@@ -22,7 +23,7 @@ export default async function LibraryIndexPage() {
   // later this will need a real kind lookup.
   const activeKind: ProfileKind = activeSlug === "office" ? "office" : "personal";
 
-  const books = await listBooks();
+  const [books, stashCount] = await Promise.all([listBooks(), countStash()]);
   const inProgress = books.filter((b) => b.status === "in-progress").length;
   const completed = books.filter((b) => b.status === "completed").length;
 
@@ -42,6 +43,14 @@ export default async function LibraryIndexPage() {
       icon: BookOpen,
       meta: `${books.length} total · ${inProgress} reading · ${completed} done`,
       availableIn: ["personal"],
+    },
+    {
+      href: "/library/stash",
+      label: "Stash",
+      sublabel: "Ad-hoc links",
+      icon: Bookmark,
+      meta: `${stashCount} item${stashCount === 1 ? "" : "s"}`,
+      availableIn: ["personal", "office"],
     },
   ];
 

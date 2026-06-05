@@ -6,7 +6,9 @@ import * as goalResources from "@/lib/repositories/goal-resources";
 function normalizeUrl(raw: string): string {
   const t = raw.trim();
   if (!t) return t;
-  if (/^https?:\/\//i.test(t)) return t;
+  // Preserve any explicit URI scheme (http, https, file, ftp, mailto, ...).
+  // Otherwise assume the user typed a bare host/path and prefix https://.
+  if (/^[a-z][a-z0-9+\-.]*:/i.test(t)) return t;
   return `https://${t}`;
 }
 

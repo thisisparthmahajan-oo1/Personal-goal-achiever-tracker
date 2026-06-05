@@ -1,45 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  Plus,
-  X,
-  Trash2,
-  ExternalLink,
-  FileText,
-  BarChart3,
-  Notebook,
-  Code2,
-  MessageSquare,
-  Image as ImageIcon,
-  Copy,
-  Check,
-} from "lucide-react";
+import { Plus, X, Trash2, Copy, Check } from "lucide-react";
 import {
   createGoalResourceAction,
   deleteGoalResourceAction,
 } from "@/app/actions/goal-resources";
 import type { GoalResource } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
-
-type IconType = typeof FileText;
-
-function pickIcon(url: string): IconType {
-  try {
-    const host = new URL(url).host.toLowerCase().replace(/^www\./, "");
-    if (host.includes("docs.google.com") || host.includes("drive.google.com"))
-      return FileText;
-    if (host.includes("notion.so") || host.includes("notion.site")) return Notebook;
-    if (host.includes("github.com") || host.includes("gitlab.com")) return Code2;
-    if (host.includes("grafana") || host.includes("datadog") || host.includes("metabase"))
-      return BarChart3;
-    if (host.includes("figma.com")) return ImageIcon;
-    if (host.includes("slack.com")) return MessageSquare;
-    return ExternalLink;
-  } catch {
-    return ExternalLink;
-  }
-}
+import { pickIcon } from "./url-icons";
 
 export function GoalResources({
   goalId,
