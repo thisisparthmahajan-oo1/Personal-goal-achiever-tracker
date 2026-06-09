@@ -500,22 +500,36 @@ server.registerTool(
   {
     title: "Add stash item",
     description:
-      "Save an ad-hoc link to the Library Stash. Use for URLs the user wants to remember but that don't belong to a specific goal. `label` is a short title, `url` is the link (any scheme — https/file/mailto/etc. preserved as-is), `note` is optional one-line context.",
+      "Save an ad-hoc item to the Library Stash. Use for URLs or text snippets the user wants to remember but that don't belong to a specific goal. `label` is a short title (required). `url` is optional — any scheme (https/file/mailto/etc.) preserved as-is; bare hosts get https:// prefixed. `note` is optional multi-line content (paste a snippet, jot a thought). At least one of `url` or `note` must be provided.",
     inputSchema: {
       label: z.string().min(1).max(200),
-      url: z.string().min(1).max(2000),
-      note: z.string().max(500).nullable().optional(),
+      url: z.string().max(2000).nullable().optional(),
+      note: z.string().max(5000).nullable().optional(),
     },
   },
   async ({ label, url, note }) => {
-    const trimmedUrl = url.trim();
-    const normalizedUrl = /^[a-z][a-z0-9+\-.]*:/i.test(trimmedUrl)
-      ? trimmedUrl
-      : `https://${trimmedUrl}`;
+    const trimmedUrl = url?.trim();
+    const normalizedUrl = trimmedUrl
+      ? /^[a-z][a-z0-9+\-.]*:/i.test(trimmedUrl)
+        ? trimmedUrl
+        : `https://${trimmedUrl}`
+      : null;
+    const trimmedNote = note?.trim() || null;
+    if (!normalizedUrl && !trimmedNote) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Refusing to save: provide at least a url or a note alongside the label.",
+          },
+        ],
+        isError: true,
+      };
+    }
     const item = await stash.create({
       label: label.trim(),
       url: normalizedUrl,
-      note: note?.trim() || null,
+      note: trimmedNote,
     });
     return asText(item);
   }

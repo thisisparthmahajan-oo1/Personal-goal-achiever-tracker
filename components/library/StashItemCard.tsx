@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
-import { Copy, Check, Pencil, Trash2, X } from "lucide-react";
+import { Copy, Check, Pencil, Trash2, X, StickyNote } from "lucide-react";
 import {
   updateStashItemAction,
   deleteStashItemAction,
@@ -15,27 +15,29 @@ export function StashItemCard({ item }: { item: StashItem }) {
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState(item.label);
-  const [url, setUrl] = useState(item.url);
+  const [url, setUrl] = useState(item.url ?? "");
   const [note, setNote] = useState(item.note ?? "");
   const [copied, setCopied] = useState(false);
 
-  const Icon = pickIcon(item.url);
+  const hasUrl = !!item.url;
+  const Icon = hasUrl && item.url ? pickIcon(item.url) : StickyNote;
+
+  const canSave =
+    label.trim().length > 0 && (url.trim().length > 0 || note.trim().length > 0);
 
   const cancel = () => {
     setLabel(item.label);
-    setUrl(item.url);
+    setUrl(item.url ?? "");
     setNote(item.note ?? "");
     setEditing(false);
   };
 
   const save = () => {
-    const l = label.trim();
-    const u = url.trim();
-    if (!l || !u) return;
+    if (!canSave) return;
     startTransition(async () => {
       await updateStashItemAction(item._id, {
-        label: l,
-        url: u,
+        label: label.trim(),
+        url: url.trim() || null,
         note: note.trim() || null,
       });
       setEditing(false);
@@ -43,8 +45,10 @@ export function StashItemCard({ item }: { item: StashItem }) {
   };
 
   const copy = async () => {
+    const text = item.url ?? item.note ?? "";
+    if (!text) return;
     try {
-      await navigator.clipboard.writeText(item.url);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -65,6 +69,7 @@ export function StashItemCard({ item }: { item: StashItem }) {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save();
             }}
             disabled={pending}
+            maxLength={200}
             className="priv min-w-[200px] flex-1 bg-transparent text-sm outline-none"
           />
           <input
@@ -75,26 +80,29 @@ export function StashItemCard({ item }: { item: StashItem }) {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save();
             }}
             disabled={pending}
-            className="priv min-w-[240px] flex-1 bg-transparent text-sm outline-none"
+            placeholder="URL (optional)"
+            maxLength={2000}
+            className="priv min-w-[240px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") cancel();
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save();
-            }}
-            placeholder="One-line note (optional)"
-            disabled={pending}
-            maxLength={500}
-            className="priv flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
-          />
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") cancel();
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save();
+          }}
+          placeholder="Note / content (optional)"
+          disabled={pending}
+          rows={3}
+          maxLength={5000}
+          className="priv block w-full resize-y bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+        />
+        <div className="flex justify-end gap-1">
           <button
             type="button"
             onClick={save}
-            disabled={pending || !label.trim() || !url.trim()}
+            disabled={pending || !canSave}
             className="rounded p-1 text-primary hover:bg-primary/15 disabled:opacity-40"
             title="Save"
           >
@@ -116,24 +124,44 @@ export function StashItemCard({ item }: { item: StashItem }) {
 
   return (
     <div className="group flex items-start gap-3 rounded-xl border border-border/30 bg-card/40 p-3 transition-colors hover:bg-card/60">
-      <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary">
+      <div
+        className={cn(
+          "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border",
+          hasUrl
+            ? "border-primary/30 bg-primary/10 text-primary"
+            : "border-border/40 bg-muted/30 text-muted-foreground"
+        )}
+      >
         <Icon className="size-3.5" />
       </div>
       <div className="min-w-0 flex-1">
-        <a
-          href={item.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={item.url}
-          className="priv block truncate text-sm font-medium text-foreground hover:text-primary"
-        >
-          {item.label}
-        </a>
-        <p className="priv mt-0.5 truncate text-[11px] text-muted-foreground/70">
-          {urlHostLabel(item.url)}
-        </p>
+        {hasUrl && item.url ? (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={item.url}
+            className="priv block truncate text-sm font-medium text-foreground hover:text-primary"
+          >
+            {item.label}
+          </a>
+        ) : (
+          <p className="priv truncate text-sm font-medium text-foreground">
+            {item.label}
+          </p>
+        )}
+        {hasUrl && item.url && (
+          <p className="priv mt-0.5 truncate text-[11px] text-muted-foreground/70">
+            {urlHostLabel(item.url)}
+          </p>
+        )}
         {item.note && (
-          <p className="priv mt-1 whitespace-pre-wrap text-[12px] italic text-muted-foreground">
+          <p
+            className={cn(
+              "priv whitespace-pre-wrap text-[12px] text-muted-foreground",
+              hasUrl ? "mt-1 italic" : "mt-1"
+            )}
+          >
             {item.note}
           </p>
         )}
@@ -145,7 +173,7 @@ export function StashItemCard({ item }: { item: StashItem }) {
         <button
           type="button"
           onClick={copy}
-          title={copied ? "Copied!" : "Copy link"}
+          title={copied ? "Copied!" : hasUrl ? "Copy link" : "Copy text"}
           className={cn(
             "rounded p-1 text-muted-foreground transition-opacity hover:text-primary",
             copied ? "text-primary opacity-100" : "opacity-0 group-hover:opacity-100"

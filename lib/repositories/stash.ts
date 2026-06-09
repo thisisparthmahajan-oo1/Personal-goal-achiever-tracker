@@ -40,7 +40,7 @@ export async function create(input: StashItemInput): Promise<StashItem> {
     _id: randomUUID(),
     profile_id: profileId,
     label: input.label,
-    url: input.url,
+    url: input.url ?? null,
     note: input.note ?? null,
     created_at: now,
     updated_at: now,

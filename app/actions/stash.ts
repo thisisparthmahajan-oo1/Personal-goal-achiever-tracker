@@ -13,13 +13,15 @@ function normalizeUrl(raw: string): string {
 
 export async function createStashItemAction(input: {
   label: string;
-  url: string;
+  url?: string | null;
   note?: string | null;
 }) {
   const label = input.label.trim();
-  const url = normalizeUrl(input.url);
-  if (!label || !url) return;
+  const url = input.url ? normalizeUrl(input.url) : null;
   const note = input.note?.trim() || null;
+  // Require at least a label, and one of (url, note) so we never save a bare title.
+  if (!label) return;
+  if (!url && !note) return;
   await stash.create({ label, url, note });
   revalidatePath("/library/stash");
   revalidatePath("/library");
@@ -27,7 +29,7 @@ export async function createStashItemAction(input: {
 
 export async function updateStashItemAction(
   id: string,
-  patch: { label?: string; url?: string; note?: string | null }
+  patch: { label?: string; url?: string | null; note?: string | null }
 ) {
   const existing = await stash.get(id);
   if (!existing) return;
@@ -38,9 +40,7 @@ export async function updateStashItemAction(
     next.label = t;
   }
   if (patch.url !== undefined) {
-    const t = normalizeUrl(patch.url);
-    if (!t) return;
-    next.url = t;
+    next.url = patch.url ? normalizeUrl(patch.url) : null;
   }
   if (patch.note !== undefined) {
     next.note = patch.note?.trim() || null;

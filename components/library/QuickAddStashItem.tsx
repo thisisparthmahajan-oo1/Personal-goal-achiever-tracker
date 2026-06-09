@@ -10,15 +10,16 @@ export function QuickAddStashItem() {
   const [note, setNote] = useState("");
   const [pending, startTransition] = useTransition();
 
+  const canSubmit =
+    label.trim().length > 0 && (url.trim().length > 0 || note.trim().length > 0);
+
   const submit = (e?: React.FormEvent) => {
     e?.preventDefault();
-    const l = label.trim();
-    const u = url.trim();
-    if (!l || !u) return;
+    if (!canSubmit) return;
     startTransition(async () => {
       await createStashItemAction({
-        label: l,
-        url: u,
+        label: label.trim(),
+        url: url.trim() || null,
         note: note.trim() || null,
       });
       setLabel("");
@@ -45,9 +46,10 @@ export function QuickAddStashItem() {
           onKeyDown={(e) => {
             if (e.key === "Escape") reset();
           }}
-          placeholder="Label (what is it?)"
+          placeholder="Label (required) — what is this?"
           disabled={pending}
           className="min-w-[200px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+          maxLength={200}
         />
         <input
           value={url}
@@ -55,27 +57,32 @@ export function QuickAddStashItem() {
           onKeyDown={(e) => {
             if (e.key === "Escape") reset();
           }}
-          placeholder="URL or file://…"
+          placeholder="URL (optional)"
           disabled={pending}
           className="min-w-[240px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+          maxLength={2000}
         />
       </div>
-      <div className="flex items-center gap-2">
-        <input
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") reset();
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
-          }}
-          placeholder="One-line note (optional) — why are you saving this?"
-          disabled={pending}
-          className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
-          maxLength={500}
-        />
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") reset();
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
+        }}
+        placeholder="Note / content (optional) — paste a snippet, jot a thought, or leave empty"
+        disabled={pending}
+        rows={2}
+        maxLength={5000}
+        className="block w-full resize-y bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+      />
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/50">
+          Label + at least URL or note
+        </p>
         <button
           type="submit"
-          disabled={pending || !label.trim() || !url.trim()}
+          disabled={pending || !canSubmit}
           className="shrink-0 inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity disabled:opacity-40"
         >
           <Plus className="size-3" />

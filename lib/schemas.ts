@@ -222,7 +222,7 @@ export const StashItemSchema = z.object({
   _id: z.string(),
   profile_id: z.string(),
   label: z.string().min(1),
-  url: z.string().min(1),
+  url: z.string().nullable().default(null),
   note: z.string().nullable().default(null),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
@@ -236,8 +236,8 @@ export const StashItemInputSchema = StashItemSchema.omit({
   updated_at: true,
 }).extend({
   label: z.string().min(1).max(200),
-  url: z.string().min(1).max(2000),
-  note: z.string().max(500).nullable().default(null),
+  url: z.string().max(2000).nullable().default(null),
+  note: z.string().max(5000).nullable().default(null),
 });
 export type StashItemInput = z.infer<typeof StashItemInputSchema>;
 
