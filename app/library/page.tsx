@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { Dumbbell, BookOpen, Bookmark, ChevronRight } from "lucide-react";
+import { Dumbbell, BookOpen, Bookmark, Users, ChevronRight } from "lucide-react";
 import { list as listBooks } from "@/lib/repositories/books";
 import { count as countStash } from "@/lib/repositories/stash";
+import {
+  listSeries as listMeetingSeries,
+  countAdhocMeetings,
+} from "@/lib/repositories/meetings";
 import { getActiveProfileSlug } from "@/lib/profile";
 import type { ProfileKind } from "@/lib/schemas";
 
@@ -23,9 +27,15 @@ export default async function LibraryIndexPage() {
   // later this will need a real kind lookup.
   const activeKind: ProfileKind = activeSlug === "office" ? "office" : "personal";
 
-  const [books, stashCount] = await Promise.all([listBooks(), countStash()]);
+  const [books, stashCount, activeSeries, adhocCount] = await Promise.all([
+    listBooks(),
+    countStash(),
+    listMeetingSeries({ archived: false }),
+    countAdhocMeetings(),
+  ]);
   const inProgress = books.filter((b) => b.status === "in-progress").length;
   const completed = books.filter((b) => b.status === "completed").length;
+  const seriesCount = activeSeries.length;
 
   const allTiles: Tile[] = [
     {
@@ -50,6 +60,14 @@ export default async function LibraryIndexPage() {
       sublabel: "Ad-hoc links",
       icon: Bookmark,
       meta: `${stashCount} item${stashCount === 1 ? "" : "s"}`,
+      availableIn: ["personal", "office"],
+    },
+    {
+      href: "/library/meetings",
+      label: "Meetings",
+      sublabel: "Series + ad-hoc",
+      icon: Users,
+      meta: `${seriesCount} series · ${adhocCount} ad-hoc`,
       availableIn: ["personal", "office"],
     },
   ];

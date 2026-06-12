@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { createStashItemAction } from "@/app/actions/stash";
+import { RichEditor } from "@/components/editor/RichEditor";
+import { stripHtml } from "@/components/editor/plain-text";
 
 export function QuickAddStashItem() {
   const [label, setLabel] = useState("");
@@ -10,8 +12,9 @@ export function QuickAddStashItem() {
   const [note, setNote] = useState("");
   const [pending, startTransition] = useTransition();
 
+  const noteHasContent = stripHtml(note).length > 0;
   const canSubmit =
-    label.trim().length > 0 && (url.trim().length > 0 || note.trim().length > 0);
+    label.trim().length > 0 && (url.trim().length > 0 || noteHasContent);
 
   const submit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -20,7 +23,7 @@ export function QuickAddStashItem() {
       await createStashItemAction({
         label: label.trim(),
         url: url.trim() || null,
-        note: note.trim() || null,
+        note: noteHasContent ? note : null,
       });
       setLabel("");
       setUrl("");
@@ -63,18 +66,12 @@ export function QuickAddStashItem() {
           maxLength={2000}
         />
       </div>
-      <textarea
+      <RichEditor
         value={note}
-        onChange={(e) => setNote(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") reset();
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
-        }}
+        onChange={setNote}
         placeholder="Note / content (optional) — paste a snippet, jot a thought, or leave empty"
         disabled={pending}
-        rows={2}
-        maxLength={5000}
-        className="block w-full resize-y bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+        compact
       />
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/50">

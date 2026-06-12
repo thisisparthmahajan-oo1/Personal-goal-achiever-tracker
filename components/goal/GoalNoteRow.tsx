@@ -17,6 +17,9 @@ import {
 import type { GoalNote, GoalNoteKind, Task } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
 import { KindChip } from "./GoalNoteChips";
+import { RichEditor } from "@/components/editor/RichEditor";
+import { RichRender } from "@/components/editor/RichRender";
+import { stripHtml } from "@/components/editor/plain-text";
 
 type FlatTask = { _id: string; title: string; depth: number };
 
@@ -37,12 +40,13 @@ export function GoalNoteRow({
   const titleById = new Map(tasks.map((t) => [t._id, t.title]));
   const taskTitle = note.task_id ? titleById.get(note.task_id) : null;
 
+  const hasContent = stripHtml(body).length > 0;
+
   const save = () => {
-    const trimmed = body.trim();
-    if (!trimmed) return;
+    if (!hasContent) return;
     startTransition(async () => {
       await updateGoalNoteAction(note._id, {
-        body: trimmed,
+        body,
         kind,
         task_id: taskId,
       });
@@ -94,7 +98,7 @@ export function GoalNoteRow({
             <button
               type="button"
               onClick={save}
-              disabled={pending || !body.trim()}
+              disabled={pending || !hasContent}
               title="Save"
               className="rounded p-1 text-primary hover:bg-primary/15 disabled:opacity-40"
             >
@@ -138,21 +142,15 @@ export function GoalNoteRow({
       </div>
 
       {editing ? (
-        <textarea
+        <RichEditor
           value={body}
-          onChange={(e) => setBody(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save();
-            if (e.key === "Escape") cancel();
-          }}
+          onChange={setBody}
           disabled={pending}
-          rows={Math.max(3, body.split("\n").length)}
-          className="priv w-full resize-y rounded-md border border-border/40 bg-background/40 px-2 py-1.5 text-sm outline-none focus:border-primary/50"
+          compact
+          autoFocus
         />
       ) : (
-        <p className="priv whitespace-pre-wrap text-sm text-foreground/90">
-          {note.body}
-        </p>
+        <RichRender html={note.body} className="text-foreground/90" />
       )}
     </div>
   );

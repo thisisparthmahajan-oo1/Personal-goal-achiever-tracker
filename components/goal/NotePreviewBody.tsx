@@ -2,22 +2,25 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { RichRender } from "@/components/editor/RichRender";
+import { stripHtml } from "@/components/editor/plain-text";
 
 const CLAMP_THRESHOLD = 180;
 
 export function NotePreviewBody({ body }: { body: string }) {
-  const isLong = body.length > CLAMP_THRESHOLD || body.includes("\n");
+  const plain = stripHtml(body);
+  const isLong = plain.length > CLAMP_THRESHOLD || plain.includes("\n");
   const [expanded, setExpanded] = useState(false);
 
   return (
     <div>
-      <p
-        className={`priv whitespace-pre-wrap text-sm text-foreground/90 ${
-          !expanded && isLong ? "line-clamp-3" : ""
-        }`}
-      >
-        {body}
-      </p>
+      {expanded || !isLong ? (
+        <RichRender html={body} className="text-foreground/90" />
+      ) : (
+        <p className="priv whitespace-pre-wrap text-sm text-foreground/90 line-clamp-3">
+          {plain}
+        </p>
+      )}
       {isLong && (
         <button
           type="button"

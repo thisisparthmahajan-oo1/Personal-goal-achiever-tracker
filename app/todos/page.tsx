@@ -1,5 +1,6 @@
 import { startOfDay, subDays, isToday, isYesterday, format } from "date-fns";
 import { listOpen, listCompletedBetween } from "@/lib/repositories/todos";
+import { getMeeting } from "@/lib/repositories/meetings";
 import { QuickAddTodo } from "@/components/todos/QuickAddTodo";
 import { TodoRow } from "@/components/todos/TodoRow";
 import type { Todo } from "@/lib/schemas";
@@ -39,6 +40,21 @@ export default async function TodosPage() {
   const doneByDay = groupByDay(recentDone);
   const doneToday = doneByDay.find((g) => isToday(g.date))?.items.length ?? 0;
 
+  // Resolve meeting metadata for any TODO that carries a source_meeting_id.
+  // One lookup per unique meeting id; small N.
+  const meetingIds = new Set<string>();
+  for (const t of openTodos) if (t.source_meeting_id) meetingIds.add(t.source_meeting_id);
+  for (const t of recentDone) if (t.source_meeting_id) meetingIds.add(t.source_meeting_id);
+  const meetingMetaList = await Promise.all(
+    [...meetingIds].map((id) => getMeeting(id).then((m) => (m ? { id: m._id, title: m.title } : null)))
+  );
+  const meetingById = new Map(
+    meetingMetaList.filter((m): m is { id: string; title: string } => m !== null).map((m) => [m.id, m])
+  );
+
+  const sourceFor = (t: Todo) =>
+    t.source_meeting_id ? meetingById.get(t.source_meeting_id) ?? null : null;
+
   return (
     <div className="mx-auto max-w-3xl px-8 py-10">
       <header className="mb-8">
@@ -73,7 +89,7 @@ export default async function TodosPage() {
         ) : (
           <div className="space-y-2">
             {openTodos.map((t) => (
-              <TodoRow key={t._id} todo={t} />
+              <TodoRow key={t._id} todo={t} sourceMeeting={sourceFor(t)} />
             ))}
           </div>
         )}
@@ -96,7 +112,7 @@ export default async function TodosPage() {
                 </h3>
                 <div className="space-y-2">
                   {group.items.map((t) => (
-                    <TodoRow key={t._id} todo={t} />
+                    <TodoRow key={t._id} todo={t} sourceMeeting={sourceFor(t)} />
                   ))}
                 </div>
               </div>

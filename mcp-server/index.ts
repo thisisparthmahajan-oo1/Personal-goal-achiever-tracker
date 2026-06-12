@@ -25,6 +25,7 @@ import * as tasks from "../lib/repositories/tasks";
 import * as todos from "../lib/repositories/todos";
 import * as goalNotes from "../lib/repositories/goal-notes";
 import * as stash from "../lib/repositories/stash";
+import * as meetings from "../lib/repositories/meetings";
 import {
   Frequency,
   GoalNoteKind,
@@ -545,6 +546,134 @@ server.registerTool(
   async ({ id }) => {
     const ok = await stash.remove(id);
     return asText({ ok });
+  }
+);
+
+// ---------- Meetings ----------
+
+server.registerTool(
+  "list_meeting_series",
+  {
+    title: "List meeting series",
+    description:
+      "List recurring meeting series in the active profile. Optional `archived` filter (default: only active series).",
+    inputSchema: { archived: z.boolean().optional() },
+  },
+  async ({ archived }) => {
+    return asText(await meetings.listSeries({ archived: archived ?? false }));
+  }
+);
+
+server.registerTool(
+  "create_meeting_series",
+  {
+    title: "Create meeting series",
+    description:
+      "Create a recurring meeting series (e.g. 'Weekly 1:1 with Anand'). `cadence_label` is a free-form human description like 'Mondays 4pm' — no real recurrence rule is enforced. `default_attendees` is prefilled into each new meeting's notes.",
+    inputSchema: {
+      title: z.string().min(1).max(200),
+      cadence_label: z.string().max(100).nullable().optional(),
+      default_attendees: z.string().max(500).nullable().optional(),
+    },
+  },
+  async ({ title, cadence_label, default_attendees }) => {
+    const series = await meetings.createSeries({
+      title: title.trim(),
+      cadence_label: cadence_label?.trim() || null,
+      default_attendees: default_attendees?.trim() || null,
+    });
+    return asText(series);
+  }
+);
+
+server.registerTool(
+  "list_meetings",
+  {
+    title: "List meetings",
+    description:
+      "List meetings in the active profile, newest first. Pass `series_id` to scope to one series, or `series_id: null` for ad-hoc only. Omit to list everything. Optional `limit`.",
+    inputSchema: {
+      series_id: z.string().nullable().optional(),
+      limit: z.number().int().positive().optional(),
+    },
+  },
+  async ({ series_id, limit }) => {
+    const opts: { series_id?: string | null; limit?: number } = {};
+    if (series_id !== undefined) opts.series_id = series_id;
+    if (limit !== undefined) opts.limit = limit;
+    return asText(await meetings.listMeetings(opts));
+  }
+);
+
+server.registerTool(
+  "create_meeting",
+  {
+    title: "Create meeting",
+    description:
+      "Log a meeting. Pass `series_id` to attach to a recurring series, or omit/null for ad-hoc. `meeting_date` defaults to today if omitted. `body` is free-form multi-line notes (attendees, agenda, decisions). Use `add_meeting_action_item` afterwards to turn each follow-up into a real TODO.",
+    inputSchema: {
+      series_id: z.string().nullable().optional(),
+      title: z.string().max(200).optional(),
+      meeting_date: z.string().optional(),
+      body: z.string().max(20000).optional(),
+    },
+  },
+  async ({ series_id, title, meeting_date, body }) => {
+    const seriesId = series_id ?? null;
+    let resolvedTitle = title?.trim() || "";
+    let resolvedBody = body ?? "";
+    const meetingDate = meeting_date ? new Date(meeting_date) : new Date();
+    if (seriesId && !resolvedTitle) {
+      const series = await meetings.getSeries(seriesId);
+      if (series) {
+        const datePart = meetingDate.toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+        resolvedTitle = `${series.title} — ${datePart}`;
+        if (!resolvedBody && series.default_attendees) {
+          resolvedBody = `Attendees: ${series.default_attendees}\n\n`;
+        }
+      }
+    }
+    if (!resolvedTitle) resolvedTitle = "Untitled meeting";
+    const meeting = await meetings.createMeeting({
+      series_id: seriesId,
+      title: resolvedTitle,
+      meeting_date: meetingDate,
+      body: resolvedBody,
+    });
+    return asText(meeting);
+  }
+);
+
+server.registerTool(
+  "add_meeting_action_item",
+  {
+    title: "Add meeting action item",
+    description:
+      "Turn a follow-up from a meeting into a real TODO. Creates a Todo with `source_meeting_id` pointing back to the meeting; it appears in /todos and in the meeting's Action Items section. Use this for every concrete follow-up, not a freeform note in the meeting body.",
+    inputSchema: {
+      meeting_id: z.string(),
+      title: z.string().min(1).max(300),
+    },
+  },
+  async ({ meeting_id, title }) => {
+    const meeting = await meetings.getMeeting(meeting_id);
+    if (!meeting) {
+      return {
+        content: [
+          { type: "text", text: `Meeting not found: ${meeting_id}` },
+        ],
+        isError: true,
+      };
+    }
+    const todo = await todos.create({
+      title: title.trim(),
+      source_meeting_id: meeting_id,
+    });
+    return asText(todo);
   }
 );
 

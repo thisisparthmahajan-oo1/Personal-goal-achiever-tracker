@@ -144,6 +144,7 @@ export const TodoSchema = z.object({
   profile_id: z.string(),
   title: z.string().min(1),
   notes: z.string().nullable().default(null),
+  source_meeting_id: z.string().nullable().default(null),
   completed_at: z.coerce.date().nullable().default(null),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
@@ -154,6 +155,7 @@ export const TodoInputSchema = TodoSchema.omit({
   _id: true,
   profile_id: true,
   notes: true,
+  source_meeting_id: true,
   completed_at: true,
   created_at: true,
   updated_at: true,
@@ -243,6 +245,62 @@ export type StashItemInput = z.infer<typeof StashItemInputSchema>;
 
 export const StashItemPatchSchema = StashItemInputSchema.partial();
 export type StashItemPatch = z.infer<typeof StashItemPatchSchema>;
+
+export const MeetingSeriesSchema = z.object({
+  _id: z.string(),
+  profile_id: z.string(),
+  title: z.string().min(1),
+  cadence_label: z.string().nullable().default(null),
+  default_attendees: z.string().nullable().default(null),
+  archived: z.boolean().default(false),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type MeetingSeries = z.infer<typeof MeetingSeriesSchema>;
+
+export const MeetingSeriesInputSchema = MeetingSeriesSchema.omit({
+  _id: true,
+  profile_id: true,
+  archived: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  title: z.string().min(1).max(200),
+  cadence_label: z.string().max(100).nullable().default(null),
+  default_attendees: z.string().max(500).nullable().default(null),
+});
+export type MeetingSeriesInput = z.infer<typeof MeetingSeriesInputSchema>;
+
+export const MeetingSeriesPatchSchema = MeetingSeriesInputSchema.partial().extend({
+  archived: z.boolean().optional(),
+});
+export type MeetingSeriesPatch = z.infer<typeof MeetingSeriesPatchSchema>;
+
+export const MeetingSchema = z.object({
+  _id: z.string(),
+  profile_id: z.string(),
+  series_id: z.string().nullable().default(null),
+  title: z.string().min(1),
+  meeting_date: z.coerce.date(),
+  body: z.string().default(""),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type Meeting = z.infer<typeof MeetingSchema>;
+
+export const MeetingInputSchema = MeetingSchema.omit({
+  _id: true,
+  profile_id: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  title: z.string().min(1).max(200),
+  body: z.string().max(20000).default(""),
+});
+export type MeetingInput = z.infer<typeof MeetingInputSchema>;
+
+export const MeetingPatchSchema = MeetingInputSchema.partial();
+export type MeetingPatch = z.infer<typeof MeetingPatchSchema>;
 
 export const TaskInstanceSchema = z.object({
   _id: z.string(),

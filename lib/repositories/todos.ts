@@ -60,7 +60,9 @@ export async function get(id: string): Promise<Todo | null> {
   return doc ? TodoSchema.parse(doc) : null;
 }
 
-export async function create(input: TodoInput): Promise<Todo> {
+export async function create(
+  input: TodoInput & { source_meeting_id?: string | null }
+): Promise<Todo> {
   const col = await collection();
   const now = new Date();
   const profileId = await getActiveProfileId();
@@ -69,12 +71,22 @@ export async function create(input: TodoInput): Promise<Todo> {
     profile_id: profileId,
     title: input.title,
     notes: null,
+    source_meeting_id: input.source_meeting_id ?? null,
     completed_at: null,
     created_at: now,
     updated_at: now,
   };
   await col.insertOne(todo);
   return todo;
+}
+
+export async function listForMeeting(meetingId: string): Promise<Todo[]> {
+  const col = await collection();
+  const docs = await col
+    .find({ source_meeting_id: meetingId } as Filter<Todo>)
+    .sort({ created_at: 1 })
+    .toArray();
+  return docs.map((d) => TodoSchema.parse(d));
 }
 
 export async function setCompleted(

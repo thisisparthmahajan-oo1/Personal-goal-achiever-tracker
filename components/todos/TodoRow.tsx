@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
-import { Check, Trash2, Pencil, StickyNote, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { Check, Trash2, Pencil, StickyNote, ChevronDown, CalendarClock } from "lucide-react";
 import {
   toggleTodoAction,
   renameTodoAction,
@@ -10,15 +11,21 @@ import {
 } from "@/app/actions/todos";
 import type { Todo } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
+import { RichEditor } from "@/components/editor/RichEditor";
 
-export function TodoRow({ todo }: { todo: Todo }) {
+export function TodoRow({
+  todo,
+  sourceMeeting,
+}: {
+  todo: Todo;
+  sourceMeeting?: { id: string; title: string } | null;
+}) {
   const [pending, startTransition] = useTransition();
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(todo.title);
   const [expanded, setExpanded] = useState(false);
   const [notesDraft, setNotesDraft] = useState(todo.notes ?? "");
   const titleRef = useRef<HTMLInputElement>(null);
-  const notesRef = useRef<HTMLTextAreaElement>(null);
   const done = todo.completed_at !== null;
   const hasNotes = (todo.notes ?? "").trim().length > 0;
 
@@ -34,12 +41,6 @@ export function TodoRow({ todo }: { todo: Todo }) {
     }
   }, [editingTitle]);
 
-  useEffect(() => {
-    if (expanded && !hasNotes) {
-      notesRef.current?.focus();
-    }
-  }, [expanded, hasNotes]);
-
   const commitTitle = () => {
     const next = titleDraft.trim();
     if (next && next !== todo.title) {
@@ -50,9 +51,10 @@ export function TodoRow({ todo }: { todo: Todo }) {
     setEditingTitle(false);
   };
 
-  const commitNotes = () => {
-    const next = notesDraft;
+  const commitNotes = (html: string) => {
+    const next = html;
     if ((next ?? "") === (todo.notes ?? "")) return;
+    setNotesDraft(next);
     startTransition(() => setTodoNotesAction(todo._id, next));
   };
 
@@ -159,22 +161,28 @@ export function TodoRow({ todo }: { todo: Todo }) {
         </div>
       </div>
 
+      {sourceMeeting && (
+        <div className="px-3 pb-2 -mt-1">
+          <Link
+            href={`/library/meetings/${sourceMeeting.id}`}
+            title={`From meeting: ${sourceMeeting.title}`}
+            className="priv inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em] text-primary transition-colors hover:bg-primary/20"
+          >
+            <CalendarClock className="size-2.5" />
+            <span className="max-w-[280px] truncate">{sourceMeeting.title}</span>
+          </Link>
+        </div>
+      )}
+
       {expanded && (
         <div className="border-t border-border/30 px-3 py-2">
-          <textarea
-            ref={notesRef}
+          <RichEditor
             value={notesDraft}
-            onChange={(e) => setNotesDraft(e.target.value)}
+            onChange={setNotesDraft}
             onBlur={commitNotes}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                setNotesDraft(todo.notes ?? "");
-                setExpanded(false);
-              }
-            }}
             placeholder="Add a note… (saved on blur)"
-            rows={3}
-            className="priv w-full resize-y rounded-md border border-border/40 bg-background/40 px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/50"
+            compact
+            autoFocus={!hasNotes}
           />
         </div>
       )}

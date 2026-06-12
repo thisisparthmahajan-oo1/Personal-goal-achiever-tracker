@@ -12,6 +12,8 @@ import {
 import { createGoalNoteAction } from "@/app/actions/goal-notes";
 import type { GoalNoteKind, Task } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
+import { RichEditor } from "@/components/editor/RichEditor";
+import { stripHtml } from "@/components/editor/plain-text";
 
 export function QuickAddGoalNote({
   goalId,
@@ -28,16 +30,17 @@ export function QuickAddGoalNote({
 
   const flatTasks = flattenTasks(tasks);
 
+  const hasContent = stripHtml(body).length > 0;
+
   const submit = (e?: React.FormEvent) => {
     e?.preventDefault();
-    const t = body.trim();
-    if (!t) return;
+    if (!hasContent) return;
     startTransition(async () => {
       await createGoalNoteAction({
         goal_id: goalId,
         task_id: linking ? taskId : null,
         kind,
-        body: t,
+        body,
       });
       setBody("");
       // Keep kind + linking state so consecutive captures stay fast.
@@ -49,17 +52,12 @@ export function QuickAddGoalNote({
       onSubmit={submit}
       className="rounded-xl border border-border/40 bg-card/40 p-3 space-y-2"
     >
-      <textarea
+      <RichEditor
         value={body}
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
-          if (e.key === "Escape") setBody("");
-        }}
+        onChange={setBody}
         placeholder="Capture a note…"
         disabled={pending}
-        rows={3}
-        className="priv w-full resize-y bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+        compact
       />
       <div className="flex flex-wrap items-center gap-2">
         <KindToggle value={kind} onChange={setKind} disabled={pending} />
@@ -121,7 +119,7 @@ export function QuickAddGoalNote({
 
         <button
           type="submit"
-          disabled={pending || !body.trim()}
+          disabled={pending || !hasContent}
           className="ml-auto shrink-0 inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity disabled:opacity-40"
         >
           <Plus className="size-3" />
