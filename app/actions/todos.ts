@@ -33,3 +33,9 @@ export async function deleteTodoAction(id: string) {
   await todos.remove(id);
   revalidatePath("/todos");
 }
+
+export async function reorderTodosAction(ids: string[]) {
+  if (!Array.isArray(ids) || ids.length === 0) return;
+  await todos.setOrder(ids);
+  revalidatePath("/todos");
+}

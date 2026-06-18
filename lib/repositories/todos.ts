@@ -24,7 +24,7 @@ export async function listOpen(): Promise<Todo[]> {
   const col = await collection();
   const docs = await col
     .find({ completed_at: null } as Filter<Todo>)
-    .sort({ created_at: 1 })
+    .sort({ sort_order: 1, created_at: 1 })
     .toArray();
   return docs.map((d) => TodoSchema.parse(d));
 }
@@ -72,6 +72,7 @@ export async function create(
     title: input.title,
     notes: null,
     source_meeting_id: input.source_meeting_id ?? null,
+    sort_order: now.getTime(),
     completed_at: null,
     created_at: now,
     updated_at: now,
@@ -128,6 +129,20 @@ export async function updateNotes(
     { returnDocument: "after" }
   );
   return result ? TodoSchema.parse(result) : null;
+}
+
+export async function setOrder(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const col = await collection();
+  const now = new Date();
+  await Promise.all(
+    ids.map((id, idx) =>
+      col.updateOne(
+        { _id: id } as Filter<Todo>,
+        { $set: { sort_order: idx, updated_at: now } }
+      )
+    )
+  );
 }
 
 export async function remove(id: string): Promise<boolean> {

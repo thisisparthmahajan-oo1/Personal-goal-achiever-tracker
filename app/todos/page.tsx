@@ -3,6 +3,7 @@ import { listOpen, listCompletedBetween } from "@/lib/repositories/todos";
 import { getMeeting } from "@/lib/repositories/meetings";
 import { QuickAddTodo } from "@/components/todos/QuickAddTodo";
 import { TodoRow } from "@/components/todos/TodoRow";
+import { OpenTodosList } from "@/components/todos/OpenTodosList";
 import type { Todo } from "@/lib/schemas";
 
 export const dynamic = "force-dynamic";
@@ -87,11 +88,12 @@ export default async function TodosPage() {
             No open todos.
           </div>
         ) : (
-          <div className="space-y-2">
-            {openTodos.map((t) => (
-              <TodoRow key={t._id} todo={t} sourceMeeting={sourceFor(t)} />
-            ))}
-          </div>
+          <OpenTodosList
+            items={openTodos.map((t) => ({
+              todo: t,
+              sourceMeeting: sourceFor(t),
+            }))}
+          />
         )}
       </section>
 

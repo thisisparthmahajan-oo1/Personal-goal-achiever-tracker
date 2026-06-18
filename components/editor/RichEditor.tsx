@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
+import { Extension, InputRule } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import {
@@ -17,6 +18,27 @@ import {
   IndentIncrease,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const ARROW_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/->$/, "→"],
+  [/<-$/, "←"],
+  [/=>$/, "⇒"],
+];
+
+const SmartTypography = Extension.create({
+  name: "smartTypography",
+  addInputRules() {
+    return ARROW_REPLACEMENTS.map(
+      ([find, replace]) =>
+        new InputRule({
+          find,
+          handler: ({ state, range }) => {
+            state.tr.insertText(replace, range.from, range.to);
+          },
+        })
+    );
+  },
+});
 
 export type RichEditorProps = {
   /** Initial body. Plain text or Tiptap-authored HTML — both accepted. */
@@ -64,6 +86,7 @@ export function RichEditor({
         showOnlyWhenEditable: true,
         emptyEditorClass: "is-editor-empty",
       }),
+      SmartTypography,
     ],
     content: value || "",
     onUpdate({ editor }) {
