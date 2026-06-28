@@ -7,7 +7,11 @@ import * as trips from "@/lib/repositories/trips";
 import * as goals from "@/lib/repositories/goals";
 import * as stash from "@/lib/repositories/stash";
 import * as meetings from "@/lib/repositories/meetings";
+import * as tasks from "@/lib/repositories/tasks";
 import { TripItemStatus } from "@/lib/schemas";
+import { runWithProfile } from "@/lib/profile-context";
+
+const ALLOWED_PROFILES = new Set(["personal", "office"]);
 
 export const dynamic = "force-dynamic";
 // Mongo driver requires the Node runtime, not Edge.
@@ -83,6 +87,68 @@ function buildServer(): McpServer {
       inputSchema: {},
     },
     async () => asText(await goals.list({ status: "active" }))
+  );
+
+  // ---------- Habits ----------
+
+  server.registerTool(
+    "list_habits",
+    {
+      title: "List habits",
+      description:
+        "List every recurring habit (tasks with a recurrence rule). Includes the recurrence config so you can tell which days the habit is meant to fire.",
+      inputSchema: {},
+    },
+    async () => asText(await tasks.listHabits())
+  );
+
+  server.registerTool(
+    "today_habits",
+    {
+      title: "Today's habits",
+      description:
+        "List the habits scheduled for today plus whether each is already done. Use this before mark_habit_done so you know what to act on.",
+      inputSchema: {},
+    },
+    async () => {
+      const all = await tasks.listHabits();
+      const now = new Date();
+      const dow = now.getDay();
+      const today = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+      );
+      const scheduled = all.filter((t) =>
+        tasks.getHabitWeekdays(t).includes(dow)
+      );
+      const instances = await Promise.all(
+        scheduled.map((t) => tasks.getInstances(t._id, today, today))
+      );
+      return asText(
+        scheduled.map((t, i) => ({
+          _id: t._id,
+          title: t.title,
+          description: t.description,
+          recurrence: t.recurrence,
+          completed_today: instances[i].some((x) => x.completed_at !== null),
+        }))
+      );
+    }
+  );
+
+  server.registerTool(
+    "mark_habit_done",
+    {
+      title: "Mark a habit done for today",
+      description:
+        "Toggle today's completion for a habit by task _id. If already done today, this un-marks it. Find ids via list_habits or today_habits.",
+      inputSchema: {
+        task_id: z.string().describe("Habit task _id"),
+      },
+    },
+    async ({ task_id }) => {
+      const instance = await tasks.toggleOccurrence(task_id, new Date());
+      return asText(instance);
+    }
   );
 
   // ---------- Trips ----------
@@ -200,7 +266,7 @@ function buildServer(): McpServer {
   return server;
 }
 
-type Ctx = { params: Promise<{ token: string }> };
+type Ctx = { params: Promise<{ token: string; profile: string }> };
 
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -217,24 +283,34 @@ async function handle(req: Request, ctx: Ctx): Promise<Response> {
       { status: 500, headers: { "content-type": "application/json" } }
     );
   }
-  const { token } = await ctx.params;
+  const { token, profile } = await ctx.params;
   if (!token || !timingSafeEqual(token, expected)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { "content-type": "application/json" },
     });
   }
+  if (!ALLOWED_PROFILES.has(profile)) {
+    return new Response(
+      JSON.stringify({
+        error: `Unknown profile "${profile}". Expected one of: ${[...ALLOWED_PROFILES].join(", ")}`,
+      }),
+      { status: 404, headers: { "content-type": "application/json" } }
+    );
+  }
 
-  // Stateless: build a fresh transport + server per request. Per-request
-  // cost is negligible and avoids any shared-session state on Vercel where
-  // requests may land on different lambdas.
-  const transport = new WebStandardStreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-    enableJsonResponse: true,
+  // Bind the profile slug for the lifetime of this request so every repo
+  // call inside the tool handlers scopes to the right profile. Then build
+  // a fresh transport + server per request — stateless, no shared session.
+  return runWithProfile(profile, async () => {
+    const transport = new WebStandardStreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+      enableJsonResponse: true,
+    });
+    const server = buildServer();
+    await server.connect(transport);
+    return transport.handleRequest(req);
   });
-  const server = buildServer();
-  await server.connect(transport);
-  return transport.handleRequest(req);
 }
 
 export const GET = handle;

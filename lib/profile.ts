@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { getBySlug as getProfileBySlug, list as listProfiles } from "@/lib/repositories/profiles";
+import { getProfileFromContext } from "@/lib/profile-context";
 import type { Profile } from "@/lib/schemas";
 
 const COOKIE_NAME = "profile_slug";
@@ -7,11 +8,14 @@ const DEFAULT_SLUG = "personal";
 
 /**
  * Resolve the active profile slug. Priority:
- *   1. TRACKER_PROFILE_SLUG env (MCP server / scripts)
- *   2. profile_slug cookie (web app)
- *   3. "personal"
+ *   1. AsyncLocalStorage override (MCP route binds this per request)
+ *   2. TRACKER_PROFILE_SLUG env (MCP stdio server / scripts)
+ *   3. profile_slug cookie (web app)
+ *   4. "personal"
  */
 export async function getActiveProfileSlug(): Promise<string> {
+  const ctx = getProfileFromContext();
+  if (ctx && ctx.trim().length > 0) return ctx.trim();
   const envSlug = process.env.TRACKER_PROFILE_SLUG;
   if (envSlug && envSlug.trim().length > 0) return envSlug.trim();
   try {
