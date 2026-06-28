@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import * as todos from "@/lib/repositories/todos";
+import type { TaskStatus } from "@/lib/schemas";
 
 export async function createTodoAction(input: { title: string }) {
   const title = input.title.trim();
@@ -10,10 +11,19 @@ export async function createTodoAction(input: { title: string }) {
   revalidatePath("/todos");
 }
 
-export async function toggleTodoAction(id: string) {
+const STATUS_ORDER: TaskStatus[] = ["todo", "doing", "done"];
+
+export async function cycleTodoStatusAction(id: string) {
   const existing = await todos.get(id);
   if (!existing) return;
-  await todos.setCompleted(id, existing.completed_at === null);
+  const next =
+    STATUS_ORDER[(STATUS_ORDER.indexOf(existing.status) + 1) % STATUS_ORDER.length];
+  await todos.setStatus(id, next);
+  revalidatePath("/todos");
+}
+
+export async function setTodoStatusAction(id: string, status: TaskStatus) {
+  await todos.setStatus(id, status);
   revalidatePath("/todos");
 }
 

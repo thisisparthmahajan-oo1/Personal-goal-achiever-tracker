@@ -11,6 +11,7 @@ import {
   type Meeting,
   type MeetingInput,
   type MeetingPatch,
+  type MeetingSection,
 } from "@/lib/schemas";
 
 const SERIES_COLLECTION = "meeting_series";
@@ -148,6 +149,7 @@ export async function createMeeting(input: MeetingInput): Promise<Meeting> {
     title: input.title,
     meeting_date: input.meeting_date ?? now,
     body: input.body ?? "",
+    sections: [],
     created_at: now,
     updated_at: now,
   };
@@ -178,6 +180,62 @@ export async function updateMeeting(
     { returnDocument: "after" }
   );
   return result ? MeetingSchema.parse(result) : null;
+}
+
+async function writeSections(
+  id: string,
+  sections: MeetingSection[]
+): Promise<Meeting | null> {
+  const col = await meetingsCol();
+  const result = await col.findOneAndUpdate(
+    { _id: id } as Filter<Meeting>,
+    { $set: { sections, updated_at: new Date() } },
+    { returnDocument: "after" }
+  );
+  return result ? MeetingSchema.parse(result) : null;
+}
+
+export async function addSection(
+  id: string,
+  title: string
+): Promise<Meeting | null> {
+  const existing = await getMeeting(id);
+  if (!existing) return null;
+  const section: MeetingSection = {
+    id: randomUUID(),
+    title,
+    body: "",
+  };
+  return writeSections(id, [...existing.sections, section]);
+}
+
+export async function updateSection(
+  id: string,
+  sectionId: string,
+  patch: { title?: string; body?: string }
+): Promise<Meeting | null> {
+  const existing = await getMeeting(id);
+  if (!existing) return null;
+  const next = existing.sections.map((s) =>
+    s.id === sectionId
+      ? {
+          ...s,
+          ...(patch.title !== undefined ? { title: patch.title } : {}),
+          ...(patch.body !== undefined ? { body: patch.body } : {}),
+        }
+      : s
+  );
+  return writeSections(id, next);
+}
+
+export async function removeSection(
+  id: string,
+  sectionId: string
+): Promise<Meeting | null> {
+  const existing = await getMeeting(id);
+  if (!existing) return null;
+  const next = existing.sections.filter((s) => s.id !== sectionId);
+  return writeSections(id, next);
 }
 
 /**

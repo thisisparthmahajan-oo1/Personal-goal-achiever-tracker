@@ -92,6 +92,16 @@ export const GYM_PLAN: Day[] = [
         video: "https://www.youtube.com/watch?v=buuYPLVXsJg",
       },
       {
+        key: "day1-superman",
+        name: "Superman",
+        equipment: "Mat",
+        prescription: "3 × 12 (hold 2–3 s at top)",
+        rest: "45 s",
+        form:
+          "Face down on mat, arms extended overhead. Lift arms, chest, and legs off the floor by squeezing glutes + lower back; pause at top, lower slow.",
+        video: "https://www.youtube.com/watch?v=ydT74SAts7M",
+      },
+      {
         key: "day1-db-bicep-curl",
         name: "Dumbbell Bicep Curl",
         equipment: "Dumbbells",
@@ -109,6 +119,26 @@ export const GYM_PLAN: Day[] = [
         form:
           "Neutral grip (palms face in). Curl without rotating; targets forearm + brachialis.",
         video: "https://www.youtube.com/watch?v=zC3nLlEvin4",
+      },
+      {
+        key: "day1-incline-db-curl",
+        name: "Incline Dumbbell Curl",
+        equipment: "Dumbbells, Bench",
+        prescription: "3 × 10–12",
+        rest: "45 s",
+        form:
+          "Lie back on an incline bench (~45–60°), arms hanging straight down. Curl without letting elbows drift forward — biceps get a deep stretch at the bottom.",
+        video: "https://www.youtube.com/watch?v=soxrZlIl35U",
+      },
+      {
+        key: "day1-concentration-curl",
+        name: "Concentration Curl",
+        equipment: "Dumbbell, Bench",
+        prescription: "2–3 × 10–12",
+        rest: "45 s",
+        form:
+          "Seated, elbow braced against inner thigh. Curl DB toward shoulder squeezing the bicep peak; lower slow. One arm at a time.",
+        video: "https://www.youtube.com/watch?v=Jvj2wV0vOYU",
       },
     ],
     cooldown: [
@@ -185,6 +215,16 @@ export const GYM_PLAN: Day[] = [
         form:
           "Bench at 30–45°. DBs at shoulders, press up and slightly together, lower slow. Don't go too steep or it becomes a shoulder press.",
         video: "https://www.youtube.com/watch?v=sK4Rvug6ufo",
+      },
+      {
+        key: "day2-decline-db-bench-press",
+        name: "Decline Dumbbell Press",
+        equipment: "Dumbbells, Bench",
+        prescription: "3 × 8–10",
+        rest: "60–90 s",
+        form:
+          "Decline bench (~15–30°) — or feet up on a bench / floor press variant. Press DBs from lower chest, slight arc inward at the top. Targets the lower chest.",
+        video: "https://www.youtube.com/watch?v=KYJgQZPwGS8",
       },
       {
         key: "day2-close-grip-db-bench-press",
@@ -309,6 +349,16 @@ export const GYM_PLAN: Day[] = [
         form:
           "Forearms down, straight line head-to-heels. Squeeze glutes + abs; don't sag or pike.",
         video: "https://www.youtube.com/watch?v=pSHjTRCQxIw",
+      },
+      {
+        key: "day3-side-plank",
+        name: "Side Plank",
+        equipment: "Mat",
+        prescription: "3 × 20–30 s/side",
+        rest: "45 s",
+        form:
+          "Forearm on mat, body in a straight line from head to feet, hips lifted. Progress to hip dips (lower + raise hips slowly) once you can hold 30 s clean. Builds the obliques — side fat itself comes off through diet + cardio, not the exercise.",
+        video: "https://learn.athleanx.com/articles/abs-for-men/how-to-do-side-planks",
       },
       {
         key: "day3-russian-twist",

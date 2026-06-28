@@ -2,9 +2,9 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Check, Trash2, Pencil, StickyNote, ChevronDown, CalendarClock } from "lucide-react";
+import { Trash2, Pencil, StickyNote, ChevronDown, CalendarClock } from "lucide-react";
 import {
-  toggleTodoAction,
+  cycleTodoStatusAction,
   renameTodoAction,
   setTodoNotesAction,
   deleteTodoAction,
@@ -26,7 +26,9 @@ export function TodoRow({
   const [expanded, setExpanded] = useState(false);
   const [notesDraft, setNotesDraft] = useState(todo.notes ?? "");
   const titleRef = useRef<HTMLInputElement>(null);
-  const done = todo.completed_at !== null;
+  const status = todo.status;
+  const done = status === "done";
+  const doing = status === "doing";
   const hasNotes = (todo.notes ?? "").trim().length > 0;
 
   useEffect(() => {
@@ -68,17 +70,30 @@ export function TodoRow({
       <div className="flex items-center gap-3 px-3 py-2">
         <button
           type="button"
-          onClick={() => startTransition(() => toggleTodoAction(todo._id))}
+          onClick={() => startTransition(() => cycleTodoStatusAction(todo._id))}
           disabled={pending}
-          title={done ? "Mark open" : "Mark done"}
+          title={`Status: ${status} (click to cycle)`}
           className={cn(
-            "shrink-0 flex size-5 items-center justify-center rounded-md border transition-colors",
-            done
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border/60 hover:border-primary/60"
+            "shrink-0 flex size-5 items-center justify-center rounded-full border transition-all duration-200 active:scale-90 hover:ring-2 hover:ring-primary/30 hover:ring-offset-1 hover:ring-offset-background",
+            done && "border-primary bg-primary text-primary-foreground shadow-[0_0_8px_oklch(0.66_0.22_285/0.5)]",
+            doing && "border-primary bg-primary/15",
+            !done && !doing && "border-border/60 hover:border-primary/60",
+            pending && "opacity-60"
           )}
         >
-          {done && <Check className="size-3.5" strokeWidth={3} />}
+          {done && (
+            <svg viewBox="0 0 12 12" className="size-3">
+              <path
+                d="M2.5 6L5 8.5L9.5 3.5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+          {doing && <span className="size-1.5 rounded-full bg-primary" />}
         </button>
 
         {editingTitle ? (

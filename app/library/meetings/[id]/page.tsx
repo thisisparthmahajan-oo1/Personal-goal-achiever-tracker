@@ -5,6 +5,7 @@ import { getMeeting, getSeries } from "@/lib/repositories/meetings";
 import { listForMeeting } from "@/lib/repositories/todos";
 import { MeetingHeader } from "@/components/library/meetings/MeetingHeader";
 import { MeetingNotesEditor } from "@/components/library/meetings/MeetingNotesEditor";
+import { MeetingSectionsList } from "@/components/library/meetings/MeetingSectionsList";
 import { ActionItemsSection } from "@/components/library/meetings/ActionItemsSection";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,13 @@ export default async function MeetingDetailPage({
         </h2>
         <MeetingNotesEditor meetingId={meeting._id} initialBody={meeting.body} />
       </section>
+
+      <div className="mb-8">
+        <MeetingSectionsList
+          meetingId={meeting._id}
+          sections={meeting.sections}
+        />
+      </div>
 
       <ActionItemsSection meetingId={meeting._id} items={actionItems} />
     </div>

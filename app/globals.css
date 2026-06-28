@@ -244,3 +244,69 @@
   color: oklch(0.76 0.16 285);
   text-decoration: underline;
 }
+
+/* Task list (checkbox list) — used by both the editor and the read-only render. */
+.prose-tracker ul[data-type="taskList"],
+.rich-editor .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+.prose-tracker ul[data-type="taskList"] li,
+.rich-editor .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.15em 0;
+}
+.prose-tracker ul[data-type="taskList"] li > label,
+.rich-editor .ProseMirror ul[data-type="taskList"] li > label {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.2em;
+  user-select: none;
+}
+.prose-tracker ul[data-type="taskList"] li > div,
+.rich-editor .ProseMirror ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.prose-tracker ul[data-type="taskList"] input[type="checkbox"],
+.rich-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 1px solid oklch(0.66 0.02 280 / 0.5);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 120ms, border-color 120ms;
+}
+.prose-tracker ul[data-type="taskList"] input[type="checkbox"]:hover,
+.rich-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:hover {
+  border-color: oklch(0.66 0.22 285 / 0.7);
+}
+.prose-tracker ul[data-type="taskList"] input[type="checkbox"]:checked,
+.rich-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:checked {
+  background: oklch(0.66 0.22 285);
+  border-color: oklch(0.66 0.22 285);
+}
+.prose-tracker ul[data-type="taskList"] input[type="checkbox"]:checked::after,
+.rich-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:checked::after {
+  content: "";
+  width: 0.55rem;
+  height: 0.3rem;
+  border-left: 1.5px solid oklch(0.98 0 0);
+  border-bottom: 1.5px solid oklch(0.98 0 0);
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+.prose-tracker ul[data-type="taskList"] li[data-checked="true"] > div,
+.rich-editor .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: oklch(0.66 0.02 280 / 0.7);
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.66 0.02 280 / 0.5);
+}

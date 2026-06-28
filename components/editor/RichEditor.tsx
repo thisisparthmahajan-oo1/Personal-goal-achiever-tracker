@@ -6,6 +6,7 @@ import { BubbleMenu } from "@tiptap/react/menus";
 import { Extension, InputRule } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import { TaskList, TaskItem } from "@tiptap/extension-list";
 import {
   Bold,
   Italic,
@@ -14,6 +15,7 @@ import {
   Heading3,
   List,
   ListOrdered,
+  ListChecks,
   IndentDecrease,
   IndentIncrease,
 } from "lucide-react";
@@ -50,6 +52,9 @@ export type RichEditorProps = {
   editable?: boolean;
   /** Smaller padding/font for inline forms. */
   compact?: boolean;
+  /** Strip the wrapper border / background / rounded — use when the editor sits
+   *  inside an outer card and the doubled chrome would be redundant. */
+  bare?: boolean;
   /** Whether the underlying ProseMirror should auto-focus on mount. */
   autoFocus?: boolean;
   /** Disable the editor (e.g. while a pending save is in flight). */
@@ -64,6 +69,7 @@ export function RichEditor({
   className,
   editable = true,
   compact = false,
+  bare = false,
   autoFocus = false,
   disabled = false,
 }: RichEditorProps) {
@@ -86,6 +92,8 @@ export function RichEditor({
         showOnlyWhenEditable: true,
         emptyEditorClass: "is-editor-empty",
       }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
       SmartTypography,
     ],
     content: value || "",
@@ -122,8 +130,13 @@ export function RichEditor({
   return (
     <div
       className={cn(
-        "rich-editor relative rounded-xl border border-border/30 bg-card/40 transition-colors focus-within:border-primary/40 focus-within:bg-card/60",
-        compact ? "px-3 py-2 text-sm" : "px-4 py-3 text-sm leading-relaxed",
+        "rich-editor relative transition-colors",
+        bare
+          ? "px-0 py-1 text-sm leading-relaxed"
+          : cn(
+              "rounded-xl border border-border/30 bg-card/40 focus-within:border-primary/40 focus-within:bg-card/60",
+              compact ? "px-3 py-2 text-sm" : "px-4 py-3 text-sm leading-relaxed"
+            ),
         disabled && "opacity-60",
         className
       )}
@@ -190,16 +203,29 @@ export function RichEditor({
           >
             <ListOrdered className="size-3.5" />
           </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive("taskList")}
+            label="Checklist"
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+          >
+            <ListChecks className="size-3.5" />
+          </ToolbarButton>
           <Divider />
           <ToolbarButton
             label="Outdent (Shift+Tab)"
-            onClick={() => editor.chain().focus().liftListItem("listItem").run()}
+            onClick={() => {
+              const type = editor.isActive("taskItem") ? "taskItem" : "listItem";
+              editor.chain().focus().liftListItem(type).run();
+            }}
           >
             <IndentDecrease className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
             label="Indent (Tab)"
-            onClick={() => editor.chain().focus().sinkListItem("listItem").run()}
+            onClick={() => {
+              const type = editor.isActive("taskItem") ? "taskItem" : "listItem";
+              editor.chain().focus().sinkListItem(type).run();
+            }}
           >
             <IndentIncrease className="size-3.5" />
           </ToolbarButton>

@@ -146,6 +146,7 @@ export const TodoSchema = z.object({
   notes: z.string().nullable().default(null),
   source_meeting_id: z.string().nullable().default(null),
   sort_order: z.number().default(0),
+  status: TaskStatus.default("todo"),
   completed_at: z.coerce.date().nullable().default(null),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
@@ -158,6 +159,7 @@ export const TodoInputSchema = TodoSchema.omit({
   notes: true,
   source_meeting_id: true,
   sort_order: true,
+  status: true,
   completed_at: true,
   created_at: true,
   updated_at: true,
@@ -168,6 +170,245 @@ export type TodoInput = z.infer<typeof TodoInputSchema>;
 
 export const TodoPatchSchema = TodoInputSchema.partial();
 export type TodoPatch = z.infer<typeof TodoPatchSchema>;
+
+// ---------- Trips ----------
+
+export const TripItemStatus = z.enum([
+  "yet_to_start",
+  "in_review",
+  "completed",
+]);
+export type TripItemStatus = z.infer<typeof TripItemStatus>;
+
+export const TripSchema = z.object({
+  _id: z.string(),
+  profile_id: z.string(),
+  title: z.string().min(1),
+  destination: z.string().nullable().default(null),
+  start_date: z.coerce.date().nullable().default(null),
+  end_date: z.coerce.date().nullable().default(null),
+  travelers: z.array(z.string()).default([]),
+  cover_emoji: z.string().nullable().default(null),
+  notes: z.string().default(""),
+  currency: z.string().default("INR"),
+  archived: z.boolean().default(false),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type Trip = z.infer<typeof TripSchema>;
+
+export const TripInputSchema = z.object({
+  title: z.string().min(1).max(200),
+  destination: z.string().nullable().optional(),
+  start_date: z.coerce.date().nullable().optional(),
+  end_date: z.coerce.date().nullable().optional(),
+  travelers: z.array(z.string()).optional(),
+  cover_emoji: z.string().nullable().optional(),
+  currency: z.string().optional(),
+});
+export type TripInput = z.infer<typeof TripInputSchema>;
+
+export const TripPatchSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  destination: z.string().nullable().optional(),
+  start_date: z.coerce.date().nullable().optional(),
+  end_date: z.coerce.date().nullable().optional(),
+  travelers: z.array(z.string()).optional(),
+  cover_emoji: z.string().nullable().optional(),
+  notes: z.string().optional(),
+  currency: z.string().optional(),
+  archived: z.boolean().optional(),
+});
+export type TripPatch = z.infer<typeof TripPatchSchema>;
+
+export const TripItemSchema = z.object({
+  _id: z.string(),
+  profile_id: z.string(),
+  trip_id: z.string(),
+  name: z.string().min(1),
+  owner: z.string().nullable().default(null),
+  status: TripItemStatus.default("yet_to_start"),
+  notes: z.string().nullable().default(null),
+  due_date: z.coerce.date().nullable().default(null),
+  sort_order: z.number().default(0),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type TripItem = z.infer<typeof TripItemSchema>;
+
+export const TripItemInputSchema = TripItemSchema.omit({
+  _id: true,
+  profile_id: true,
+  trip_id: true,
+  notes: true,
+  due_date: true,
+  sort_order: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  name: z.string().min(1).max(300),
+});
+export type TripItemInput = z.infer<typeof TripItemInputSchema>;
+
+export const TripItemPatchSchema = z
+  .object({
+    name: z.string().min(1).max(300).optional(),
+    owner: z.string().nullable().optional(),
+    status: TripItemStatus.optional(),
+    notes: z.string().nullable().optional(),
+    due_date: z.coerce.date().nullable().optional(),
+  });
+export type TripItemPatch = z.infer<typeof TripItemPatchSchema>;
+
+// Trip — stays (hotels / villas / homestays)
+export const TripStaySchema = z.object({
+  _id: z.string(),
+  profile_id: z.string(),
+  trip_id: z.string(),
+  name: z.string().min(1),
+  location: z.string().nullable().default(null),
+  check_in: z.coerce.date().nullable().default(null),
+  check_out: z.coerce.date().nullable().default(null),
+  url: z.string().nullable().default(null),
+  confirmation: z.string().nullable().default(null),
+  cost: z.number().nullable().default(null),
+  notes: z.string().default(""),
+  sort_order: z.number().default(0),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type TripStay = z.infer<typeof TripStaySchema>;
+
+export const TripStayPatchSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  location: z.string().nullable().optional(),
+  check_in: z.coerce.date().nullable().optional(),
+  check_out: z.coerce.date().nullable().optional(),
+  url: z.string().nullable().optional(),
+  confirmation: z.string().nullable().optional(),
+  cost: z.number().nullable().optional(),
+  notes: z.string().optional(),
+});
+export type TripStayPatch = z.infer<typeof TripStayPatchSchema>;
+
+// Trip — transport (flights, speed boats, transfers, etc)
+export const TransportMode = z.enum([
+  "flight",
+  "boat",
+  "train",
+  "car",
+  "transfer",
+  "other",
+]);
+export type TransportMode = z.infer<typeof TransportMode>;
+
+export const TripTransportSchema = z.object({
+  _id: z.string(),
+  profile_id: z.string(),
+  trip_id: z.string(),
+  mode: TransportMode.default("flight"),
+  from_loc: z.string().nullable().default(null),
+  to_loc: z.string().nullable().default(null),
+  depart_at: z.coerce.date().nullable().default(null),
+  arrive_at: z.coerce.date().nullable().default(null),
+  provider: z.string().nullable().default(null),
+  ref: z.string().nullable().default(null),
+  url: z.string().nullable().default(null),
+  cost: z.number().nullable().default(null),
+  notes: z.string().default(""),
+  sort_order: z.number().default(0),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type TripTransport = z.infer<typeof TripTransportSchema>;
+
+export const TripTransportPatchSchema = z.object({
+  mode: TransportMode.optional(),
+  from_loc: z.string().nullable().optional(),
+  to_loc: z.string().nullable().optional(),
+  depart_at: z.coerce.date().nullable().optional(),
+  arrive_at: z.coerce.date().nullable().optional(),
+  provider: z.string().nullable().optional(),
+  ref: z.string().nullable().optional(),
+  url: z.string().nullable().optional(),
+  cost: z.number().nullable().optional(),
+  notes: z.string().optional(),
+});
+export type TripTransportPatch = z.infer<typeof TripTransportPatchSchema>;
+
+// Trip — activities (sights, food spots, experiences). day_index null = wishlist.
+export const ActivityCategory = z.enum([
+  "sight",
+  "food",
+  "beach",
+  "adventure",
+  "shopping",
+  "wellness",
+  "other",
+]);
+export type ActivityCategory = z.infer<typeof ActivityCategory>;
+
+export const ActivityStatus = z.enum(["wishlist", "booked", "done"]);
+export type ActivityStatus = z.infer<typeof ActivityStatus>;
+
+export const TripActivitySchema = z.object({
+  _id: z.string(),
+  profile_id: z.string(),
+  trip_id: z.string(),
+  name: z.string().min(1),
+  category: ActivityCategory.default("other"),
+  day_index: z.number().int().nullable().default(null),
+  time: z.string().nullable().default(null),
+  location: z.string().nullable().default(null),
+  url: z.string().nullable().default(null),
+  cost: z.number().nullable().default(null),
+  status: ActivityStatus.default("wishlist"),
+  notes: z.string().default(""),
+  sort_order: z.number().default(0),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type TripActivity = z.infer<typeof TripActivitySchema>;
+
+export const TripActivityPatchSchema = z.object({
+  name: z.string().min(1).max(300).optional(),
+  category: ActivityCategory.optional(),
+  day_index: z.number().int().nullable().optional(),
+  time: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
+  url: z.string().nullable().optional(),
+  cost: z.number().nullable().optional(),
+  status: ActivityStatus.optional(),
+  notes: z.string().optional(),
+});
+export type TripActivityPatch = z.infer<typeof TripActivityPatchSchema>;
+
+// Trip — budget line items
+export const TripBudgetItemSchema = z.object({
+  _id: z.string(),
+  profile_id: z.string(),
+  trip_id: z.string(),
+  category: z.string().default("Misc"),
+  label: z.string().min(1),
+  estimated: z.number().default(0),
+  actual: z.number().nullable().default(null),
+  paid_by: z.string().nullable().default(null),
+  notes: z.string().default(""),
+  sort_order: z.number().default(0),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+export type TripBudgetItem = z.infer<typeof TripBudgetItemSchema>;
+
+export const TripBudgetItemPatchSchema = z.object({
+  category: z.string().optional(),
+  label: z.string().min(1).max(200).optional(),
+  estimated: z.number().optional(),
+  actual: z.number().nullable().optional(),
+  paid_by: z.string().nullable().optional(),
+  notes: z.string().optional(),
+});
+export type TripBudgetItemPatch = z.infer<typeof TripBudgetItemPatchSchema>;
 
 export const GoalNoteKind = z.enum(["personal", "office"]);
 export type GoalNoteKind = z.infer<typeof GoalNoteKind>;
@@ -278,6 +519,13 @@ export const MeetingSeriesPatchSchema = MeetingSeriesInputSchema.partial().exten
 });
 export type MeetingSeriesPatch = z.infer<typeof MeetingSeriesPatchSchema>;
 
+export const MeetingSectionSchema = z.object({
+  id: z.string(),
+  title: z.string().default(""),
+  body: z.string().default(""),
+});
+export type MeetingSection = z.infer<typeof MeetingSectionSchema>;
+
 export const MeetingSchema = z.object({
   _id: z.string(),
   profile_id: z.string(),
@@ -285,6 +533,7 @@ export const MeetingSchema = z.object({
   title: z.string().min(1),
   meeting_date: z.coerce.date(),
   body: z.string().default(""),
+  sections: z.array(MeetingSectionSchema).default([]),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
 });
@@ -293,6 +542,7 @@ export type Meeting = z.infer<typeof MeetingSchema>;
 export const MeetingInputSchema = MeetingSchema.omit({
   _id: true,
   profile_id: true,
+  sections: true,
   created_at: true,
   updated_at: true,
 }).extend({

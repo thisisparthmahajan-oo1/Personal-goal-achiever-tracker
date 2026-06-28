@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Dumbbell, BookOpen, Bookmark, Users, ChevronRight } from "lucide-react";
+import { Dumbbell, BookOpen, Bookmark, Users, Plane, ChevronRight } from "lucide-react";
 import { list as listBooks } from "@/lib/repositories/books";
 import { count as countStash } from "@/lib/repositories/stash";
 import {
   listSeries as listMeetingSeries,
   countAdhocMeetings,
 } from "@/lib/repositories/meetings";
+import { listTrips } from "@/lib/repositories/trips";
 import { getActiveProfileSlug } from "@/lib/profile";
 import type { ProfileKind } from "@/lib/schemas";
 
@@ -27,15 +28,19 @@ export default async function LibraryIndexPage() {
   // later this will need a real kind lookup.
   const activeKind: ProfileKind = activeSlug === "office" ? "office" : "personal";
 
-  const [books, stashCount, activeSeries, adhocCount] = await Promise.all([
+  const [books, stashCount, activeSeries, adhocCount, trips] = await Promise.all([
     listBooks(),
     countStash(),
     listMeetingSeries({ archived: false }),
     countAdhocMeetings(),
+    activeKind === "personal"
+      ? listTrips({ archived: false })
+      : Promise.resolve([]),
   ]);
   const inProgress = books.filter((b) => b.status === "in-progress").length;
   const completed = books.filter((b) => b.status === "completed").length;
   const seriesCount = activeSeries.length;
+  const tripCount = trips.length;
 
   const allTiles: Tile[] = [
     {
@@ -69,6 +74,17 @@ export default async function LibraryIndexPage() {
       icon: Users,
       meta: `${seriesCount} series · ${adhocCount} ad-hoc`,
       availableIn: ["personal", "office"],
+    },
+    {
+      href: "/library/trips",
+      label: "Trips",
+      sublabel: "Travel checklists",
+      icon: Plane,
+      meta:
+        tripCount === 0
+          ? "no trips yet"
+          : `${tripCount} trip${tripCount === 1 ? "" : "s"}`,
+      availableIn: ["personal"],
     },
   ];
 

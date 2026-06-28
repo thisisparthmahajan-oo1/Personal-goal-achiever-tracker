@@ -152,6 +152,46 @@ export async function deleteMeetingAction(id: string) {
   for (const p of pathsForMeeting(existing.series_id, id)) revalidatePath(p);
 }
 
+// ---------- Sections (additional named note blocks within a meeting) ----------
+
+export async function addMeetingSectionAction(input: {
+  meeting_id: string;
+  title?: string;
+}) {
+  const title = input.title?.trim() ?? "";
+  const existing = await meetings.getMeeting(input.meeting_id);
+  if (!existing) return;
+  await meetings.addSection(input.meeting_id, title);
+  for (const p of pathsForMeeting(existing.series_id, input.meeting_id))
+    revalidatePath(p);
+}
+
+export async function updateMeetingSectionAction(
+  meetingId: string,
+  sectionId: string,
+  patch: { title?: string; body?: string }
+) {
+  const existing = await meetings.getMeeting(meetingId);
+  if (!existing) return;
+  const next: { title?: string; body?: string } = {};
+  if (patch.title !== undefined) next.title = patch.title;
+  if (patch.body !== undefined) next.body = patch.body;
+  await meetings.updateSection(meetingId, sectionId, next);
+  for (const p of pathsForMeeting(existing.series_id, meetingId))
+    revalidatePath(p);
+}
+
+export async function removeMeetingSectionAction(
+  meetingId: string,
+  sectionId: string
+) {
+  const existing = await meetings.getMeeting(meetingId);
+  if (!existing) return;
+  await meetings.removeSection(meetingId, sectionId);
+  for (const p of pathsForMeeting(existing.series_id, meetingId))
+    revalidatePath(p);
+}
+
 // ---------- Action items (TODOs sourced from a meeting) ----------
 
 export async function addActionItemAction(input: {
