@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { AppShell } from "@/components/shell/AppShell";
 import { AmbientBackground } from "@/components/shell/AmbientBackground";
@@ -24,11 +25,15 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const h = await headers();
+  const pathname = h.get("x-pathname") ?? "";
+  const isBareScreen = pathname === "/login" || pathname.startsWith("/login/");
+
   return (
     <html
       lang="en"
@@ -38,7 +43,7 @@ export default function RootLayout({
       <body className="min-h-full overflow-hidden">
         <AmbientBackground />
         <PrivacyProvider>
-          <AppShell>{children}</AppShell>
+          {isBareScreen ? children : <AppShell>{children}</AppShell>}
         </PrivacyProvider>
       </body>
     </html>

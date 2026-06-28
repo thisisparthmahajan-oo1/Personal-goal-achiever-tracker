@@ -12,8 +12,17 @@ const BYPASS_PREFIXES = ["/login", "/api/health", "/api/mcp"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Expose the current pathname to the root layout so it can decide whether
+  // to render the app chrome (sidebar/topbar) — we skip it on /login.
+  const passthrough = () => {
+    const res = NextResponse.next();
+    res.headers.set("x-pathname", pathname);
+    return res;
+  };
+
   if (BYPASS_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
-    return NextResponse.next();
+    return passthrough();
   }
 
   const secret = process.env.SESSION_SECRET ?? "";
@@ -27,7 +36,7 @@ export async function middleware(req: NextRequest) {
 
   const cookie = req.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (cookie && (await verifySession(secret, cookie, SESSION_MAX_AGE_MS))) {
-    return NextResponse.next();
+    return passthrough();
   }
 
   const next = pathname + (req.nextUrl.search || "");
