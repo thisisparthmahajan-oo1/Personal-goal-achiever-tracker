@@ -200,23 +200,28 @@ function buildServer(): McpServer {
   return server;
 }
 
-async function handle(req: Request): Promise<Response> {
-  const token = process.env.MCP_TOKEN;
-  if (!token) {
+type Ctx = { params: Promise<{ token: string }> };
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function handle(req: Request, ctx: Ctx): Promise<Response> {
+  const expected = process.env.MCP_TOKEN;
+  if (!expected) {
     return new Response(
       JSON.stringify({ error: "MCP_TOKEN is not configured on the server." }),
       { status: 500, headers: { "content-type": "application/json" } }
     );
   }
-  const auth = req.headers.get("authorization") ?? "";
-  const provided = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-  if (provided !== token) {
+  const { token } = await ctx.params;
+  if (!token || !timingSafeEqual(token, expected)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: {
-        "content-type": "application/json",
-        "www-authenticate": 'Bearer realm="personal-tracker-mcp"',
-      },
+      headers: { "content-type": "application/json" },
     });
   }
 
