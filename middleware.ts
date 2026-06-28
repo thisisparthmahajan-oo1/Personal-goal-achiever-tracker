@@ -6,9 +6,12 @@ import {
 } from "@/lib/auth";
 
 // Paths that bypass the session gate. /login obviously needs to render,
-// /api/health is the public liveness probe, and /api/mcp will gate itself
-// with a bearer token when that lands.
-const BYPASS_PREFIXES = ["/login", "/api/health", "/api/mcp"];
+// /api/health is the public liveness probe, /api/mcp gates itself by
+// path-token, and .well-known is reserved for protocol discovery
+// (OAuth/ACME/etc) — Claude probes /.well-known/oauth-protected-resource
+// when adding the MCP connector and needs a clean 404, not a redirect to
+// /login (which would read as a sign-in flow).
+const BYPASS_PREFIXES = ["/login", "/api/health", "/api/mcp", "/.well-known"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
