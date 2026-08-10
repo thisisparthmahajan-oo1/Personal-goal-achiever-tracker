@@ -8,7 +8,14 @@ import * as goals from "@/lib/repositories/goals";
 import * as stash from "@/lib/repositories/stash";
 import * as meetings from "@/lib/repositories/meetings";
 import * as tasks from "@/lib/repositories/tasks";
-import { TripItemStatus } from "@/lib/schemas";
+import {
+  Frequency,
+  Priority,
+  RecurrenceRuleSchema,
+  Status,
+  TaskStatus,
+  TripItemStatus,
+} from "@/lib/schemas";
 import { runWithProfile } from "@/lib/profile-context";
 
 const ALLOWED_PROFILES = new Set(["personal", "office"]);
@@ -88,13 +95,312 @@ function buildServer(): McpServer {
   // ---------- Goals ----------
 
   server.registerTool(
-    "list_active_goals",
+    "list_goals",
     {
-      title: "List active goals",
-      description: "List all active goals (excludes completed / archived).",
-      inputSchema: {},
+      title: "List goals",
+      description:
+        "List goals, optionally filtered by status. Defaults to active only — pass status 'archived' to see goals that were set aside, or 'completed' for finished ones.",
+      inputSchema: {
+        status: Status.optional().describe(
+          "Filter by status. Defaults to 'active'."
+        ),
+      },
     },
-    async () => asText(await goals.list({ status: "active" }))
+    async ({ status }) => asText(await goals.list({ status: status ?? "active" }))
+  );
+
+  server.registerTool(
+    "create_goal",
+    {
+      title: "Create goal",
+      description:
+        "Create a new goal. Goals are the top-level focus areas on the dashboard; tasks hang off them and carry the weight that drives progress.",
+      inputSchema: {
+        title: z.string().min(1).max(200).describe("Short goal title"),
+        description: z.string().nullable().optional().describe("Optional detail"),
+        target_date: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Target completion date, ISO yyyy-mm-dd"),
+        source: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Where this came from — a URL or a short label"),
+      },
+    },
+    async ({ title, description, target_date, source }) =>
+      asText(
+        await goals.create({
+          title,
+          description: description ?? null,
+          target_date: target_date ? new Date(target_date) : null,
+          source: source ?? null,
+          status: "active",
+        })
+      )
+  );
+
+  server.registerTool(
+    "update_goal",
+    {
+      title: "Update goal",
+      description:
+        "Update a goal's title, description, target_date, source, or status. Only the fields you pass are changed.",
+      inputSchema: {
+        id: z.string().describe("Goal _id"),
+        title: z.string().min(1).max(200).optional(),
+        description: z.string().nullable().optional(),
+        target_date: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Target completion date, ISO yyyy-mm-dd"),
+        source: z.string().nullable().optional(),
+        status: Status.optional(),
+      },
+    },
+    async ({ id, target_date, ...rest }) => {
+      const patch: Record<string, unknown> = { ...rest };
+      if (target_date !== undefined) {
+        patch.target_date = target_date ? new Date(target_date) : null;
+      }
+      const goal = await goals.update(id, patch);
+      if (!goal) {
+        return {
+          content: [{ type: "text" as const, text: `Goal not found: ${id}` }],
+          isError: true,
+        };
+      }
+      return asText(goal);
+    }
+  );
+
+  server.registerTool(
+    "set_goal_status",
+    {
+      title: "Archive / reactivate a goal",
+      description:
+        "Set a goal's status in one shot. Use 'archived' when the user wants a goal out of the way but still retrievable ('put X on hold', 'make X inactive'), 'completed' when they've finished it, and 'active' to bring it back. Nothing is deleted either way.",
+      inputSchema: {
+        id: z.string().describe("Goal _id"),
+        status: Status.describe("active | completed | archived"),
+      },
+    },
+    async ({ id, status }) => {
+      const goal = await goals.update(id, { status });
+      if (!goal) {
+        return {
+          content: [{ type: "text" as const, text: `Goal not found: ${id}` }],
+          isError: true,
+        };
+      }
+      return asText(goal);
+    }
+  );
+
+  // ---------- Tasks ----------
+
+  server.registerTool(
+    "list_tasks",
+    {
+      title: "List tasks",
+      description: "List tasks, optionally filtered by goal and/or status.",
+      inputSchema: {
+        goal_id: z.string().optional().describe("Restrict to one goal"),
+        status: TaskStatus.optional().describe("todo | doing | done"),
+      },
+    },
+    async (args) => asText(await tasks.list(args))
+  );
+
+  server.registerTool(
+    "create_task",
+    {
+      title: "Create task",
+      description:
+        "Create a task or habit. If 'goal_id' is provided, the task belongs to that goal — use 'weight' (0-100) for its share of the goal (root weights sum to 100; subtask weights sum to parent's weight). If 'goal_id' is omitted or null, the task is a standalone habit; in that case 'recurrence' must be set, 'weight' must be 0, and no subtasks are allowed. Use parent_task_id for subtasks (max 2 nesting levels).",
+      inputSchema: {
+        goal_id: z.string().nullable().optional(),
+        title: z.string().min(1).max(200),
+        weight: z.number().int().min(0).max(100).default(0),
+        parent_task_id: z.string().nullable().optional(),
+        description: z.string().nullable().optional(),
+        priority: Priority.optional(),
+        due_date: z.string().nullable().optional().describe("ISO yyyy-mm-dd"),
+        recurrence: z
+          .object({
+            freq: Frequency,
+            interval: z.number().int().positive().default(1),
+            weekdays: z
+              .array(z.number().int().min(0).max(6))
+              .nullable()
+              .optional(),
+            end_date: z.string().nullable().optional(),
+          })
+          .nullable()
+          .optional(),
+      },
+    },
+    async ({
+      goal_id,
+      title,
+      weight,
+      parent_task_id,
+      description,
+      priority,
+      due_date,
+      recurrence,
+    }) => {
+      const rec = recurrence
+        ? RecurrenceRuleSchema.parse({
+            freq: recurrence.freq,
+            interval: recurrence.interval ?? 1,
+            weekdays: recurrence.weekdays ?? null,
+            end_date: recurrence.end_date ? new Date(recurrence.end_date) : null,
+          })
+        : null;
+      try {
+        return asText(
+          await tasks.create({
+            goal_id: goal_id ?? null,
+            title,
+            weight,
+            parent_task_id: parent_task_id ?? null,
+            description: description ?? null,
+            status: "todo",
+            priority: priority ?? "med",
+            recurrence: rec,
+            due_date: due_date ? new Date(due_date) : null,
+          })
+        );
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: err instanceof Error ? err.message : String(err),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "update_task",
+    {
+      title: "Update task",
+      description:
+        "Update a task's title, status, weight, priority, description, or due date. Setting status to 'done' on a parent cascades to subtasks; completing all subtasks auto-completes the parent.",
+      inputSchema: {
+        id: z.string(),
+        title: z.string().min(1).max(200).optional(),
+        status: TaskStatus.optional(),
+        weight: z.number().int().min(0).max(100).optional(),
+        priority: Priority.optional(),
+        description: z.string().nullable().optional(),
+        due_date: z.string().nullable().optional().describe("ISO yyyy-mm-dd"),
+      },
+    },
+    async ({ id, due_date, ...rest }) => {
+      const patch: Record<string, unknown> = { ...rest };
+      if (due_date !== undefined) {
+        patch.due_date = due_date ? new Date(due_date) : null;
+      }
+      try {
+        const task = await tasks.update(id, patch);
+        if (!task) {
+          return {
+            content: [{ type: "text" as const, text: `Task not found: ${id}` }],
+            isError: true,
+          };
+        }
+        return asText(task);
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: err instanceof Error ? err.message : String(err),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "delete_task",
+    {
+      title: "Delete task",
+      description:
+        "Delete a task and all its subtasks. Permanent — prefer setting status to 'done' if the user just finished it.",
+      inputSchema: { id: z.string() },
+    },
+    async ({ id }) => asText({ ok: await tasks.remove(id) })
+  );
+
+  server.registerTool(
+    "set_recurrence",
+    {
+      title: "Set recurrence",
+      description:
+        "Set or clear the recurrence rule on a task. Pass `rule: null` to clear.",
+      inputSchema: {
+        task_id: z.string(),
+        rule: z
+          .object({
+            freq: Frequency,
+            interval: z.number().int().positive().default(1),
+            weekdays: z
+              .array(z.number().int().min(0).max(6))
+              .nullable()
+              .optional(),
+            end_date: z.string().nullable().optional(),
+          })
+          .nullable(),
+      },
+    },
+    async ({ task_id, rule }) => {
+      const parsed = rule
+        ? RecurrenceRuleSchema.parse({
+            freq: rule.freq,
+            interval: rule.interval ?? 1,
+            weekdays: rule.weekdays ?? null,
+            end_date: rule.end_date ? new Date(rule.end_date) : null,
+          })
+        : null;
+      const task = await tasks.update(task_id, { recurrence: parsed });
+      if (!task) {
+        return {
+          content: [{ type: "text" as const, text: `Task not found: ${task_id}` }],
+          isError: true,
+        };
+      }
+      return asText(task);
+    }
+  );
+
+  server.registerTool(
+    "toggle_task_occurrence",
+    {
+      title: "Toggle a task occurrence",
+      description:
+        "Toggle completion of a recurring task's occurrence on a given date. Omit 'date' for today. For habits specifically, mark_habit_done is the friendlier entry point.",
+      inputSchema: {
+        task_id: z.string(),
+        date: z
+          .string()
+          .optional()
+          .describe("ISO yyyy-mm-dd. Defaults to today."),
+      },
+    },
+    async ({ task_id, date }) =>
+      asText(await tasks.toggleOccurrence(task_id, date ? new Date(date) : new Date()))
   );
 
   // ---------- Habits ----------

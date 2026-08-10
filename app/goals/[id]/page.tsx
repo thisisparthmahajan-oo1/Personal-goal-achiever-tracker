@@ -23,6 +23,7 @@ import { listForGoal as listGoalResources } from "@/lib/repositories/goal-resour
 import { QuickAddGoalNote } from "@/components/goal/QuickAddGoalNote";
 import { GoalNotesPreview } from "@/components/goal/GoalNotesPreview";
 import { GoalResources } from "@/components/goal/GoalResources";
+import { GoalArchiveButton } from "@/components/goal/GoalArchiveButton";
 import { deleteGoalAction } from "@/app/actions/goals";
 
 export const dynamic = "force-dynamic";
@@ -167,6 +168,7 @@ export default async function GoalDetailPage({
             <Pencil className="size-4" />
             Edit
           </Link>
+          <GoalArchiveButton goalId={goal._id} status={goal.status} />
           <form action={deleteThis}>
             <Button
               type="submit"

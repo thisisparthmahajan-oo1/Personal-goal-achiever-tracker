@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, ChevronRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { GoalCard } from "@/components/dashboard/GoalCard";
 import { StaggerFade, FadeInItem } from "@/components/motion/StaggerFade";
@@ -8,7 +8,10 @@ import { getDashboardSummary } from "@/lib/repositories/goals";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const goals = await getDashboardSummary();
+  const [goals, archived] = await Promise.all([
+    getDashboardSummary(),
+    getDashboardSummary({ status: "archived" }),
+  ]);
 
   return (
     <div className="mx-auto max-w-7xl px-8 py-10">
@@ -59,6 +62,23 @@ export default async function Home() {
             ))}
           </div>
         </StaggerFade>
+      )}
+
+      {archived.length > 0 && (
+        <details className="group mt-10">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground">
+            <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" />
+            Archived
+            <span className="priv font-mono tabular-nums" data-numeric>
+              {archived.length}
+            </span>
+          </summary>
+          <div className="mt-5 grid grid-cols-1 gap-5 opacity-60 transition-opacity hover:opacity-100 md:grid-cols-2 xl:grid-cols-3">
+            {archived.map((g) => (
+              <GoalCard key={g._id} goal={g} />
+            ))}
+          </div>
+        </details>
       )}
     </div>
   );

@@ -88,12 +88,15 @@ export async function remove(id: string): Promise<boolean> {
 }
 
 /**
- * Dashboard summary: for each active goal, compute weighted progress and a
- * recent slice of the progress history. N+1 fetches; fine for a personal-scale
- * dataset and far simpler than a giant aggregation.
+ * Dashboard summary: for each goal in the requested status (active by default),
+ * compute weighted progress and a recent slice of the progress history. N+1
+ * fetches; fine for a personal-scale dataset and far simpler than a giant
+ * aggregation.
  */
-export async function getDashboardSummary(): Promise<GoalSummary[]> {
-  const goals = await list({ status: "active" });
+export async function getDashboardSummary(
+  filter?: { status?: Status }
+): Promise<GoalSummary[]> {
+  const goals = await list({ status: filter?.status ?? "active" });
   if (goals.length === 0) return [];
   const tasksCol = await getCollection<Task>("tasks");
   const tasks = await tasksCol
