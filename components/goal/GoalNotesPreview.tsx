@@ -1,9 +1,6 @@
 import Link from "next/link";
-import { formatDistanceToNowStrict } from "date-fns";
-import { NotebookText } from "lucide-react";
 import type { GoalNote, Task } from "@/lib/schemas";
-import { KindChip } from "./GoalNoteChips";
-import { NotePreviewBody } from "./NotePreviewBody";
+import { GoalNoteRow } from "./GoalNoteRow";
 
 export function GoalNotesPreview({
   goalId,
@@ -24,36 +21,11 @@ export function GoalNotesPreview({
     );
   }
 
-  const titleById = new Map(tasks.map((t) => [t._id, t.title]));
-
   return (
     <div className="space-y-2">
-      {notes.map((n) => {
-        const taskTitle = n.task_id ? titleById.get(n.task_id) : null;
-        return (
-          <div
-            key={n._id}
-            className="rounded-xl border border-border/30 bg-card/40 p-3"
-          >
-            <div className="mb-1.5 flex items-center gap-2">
-              <KindChip kind={n.kind} />
-              {taskTitle && (
-                <span
-                  className="priv inline-flex items-center gap-1 rounded-md border border-border/40 bg-muted/30 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
-                  title={taskTitle}
-                >
-                  <NotebookText className="size-2.5" />
-                  <span className="max-w-[180px] truncate">{taskTitle}</span>
-                </span>
-              )}
-              <span className="priv ml-auto text-[10px] uppercase tracking-[0.14em] text-muted-foreground/60">
-                {formatDistanceToNowStrict(n.created_at, { addSuffix: true })}
-              </span>
-            </div>
-            <NotePreviewBody body={n.body} />
-          </div>
-        );
-      })}
+      {notes.map((n) => (
+        <GoalNoteRow key={n._id} note={n} tasks={tasks} />
+      ))}
       {totalCount > notes.length && (
         <Link
           href={`/goals/${goalId}/notes`}

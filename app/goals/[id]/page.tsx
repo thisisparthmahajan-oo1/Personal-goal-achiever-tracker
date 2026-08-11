@@ -20,9 +20,11 @@ import {
   countForGoal as countGoalNotes,
 } from "@/lib/repositories/goal-notes";
 import { listForGoal as listGoalResources } from "@/lib/repositories/goal-resources";
+import { listForGoal as listGoalTodos } from "@/lib/repositories/todos";
 import { QuickAddGoalNote } from "@/components/goal/QuickAddGoalNote";
 import { GoalNotesPreview } from "@/components/goal/GoalNotesPreview";
 import { GoalResources } from "@/components/goal/GoalResources";
+import { GoalTodosSection } from "@/components/goal/GoalTodosSection";
 import { GoalArchiveButton } from "@/components/goal/GoalArchiveButton";
 import { deleteGoalAction } from "@/app/actions/goals";
 
@@ -65,7 +67,7 @@ export default async function GoalDetailPage({
   const { id } = await params;
   const today = startOfDay(new Date());
   const rangeStart = subDays(today, 6);
-  const [goal, tasks, occurrences, history, recentNotes, notesCount, resources] =
+  const [goal, tasks, occurrences, history, recentNotes, notesCount, resources, goalTodos] =
     await Promise.all([
       getGoal(id),
       listTasks({ goal_id: id }),
@@ -74,6 +76,7 @@ export default async function GoalDetailPage({
       listRecentNotes(id, 3),
       countGoalNotes(id),
       listGoalResources(id),
+      listGoalTodos(id),
     ]);
   if (!goal) notFound();
 
@@ -282,6 +285,10 @@ export default async function GoalDetailPage({
           Resources
         </h2>
         <GoalResources goalId={goal._id} resources={resources} />
+      </section>
+
+      <section className="mt-10">
+        <GoalTodosSection goalId={goal._id} items={goalTodos} />
       </section>
 
       <section className="mt-10">

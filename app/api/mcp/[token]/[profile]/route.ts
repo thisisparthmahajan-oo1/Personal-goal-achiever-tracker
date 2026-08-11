@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import * as todos from "@/lib/repositories/todos";
 import * as trips from "@/lib/repositories/trips";
+import * as tripSections from "@/lib/repositories/trip-sections";
 import * as goals from "@/lib/repositories/goals";
 import * as stash from "@/lib/repositories/stash";
 import * as meetings from "@/lib/repositories/meetings";
@@ -14,7 +15,11 @@ import {
   RecurrenceRuleSchema,
   Status,
   TaskStatus,
-  TripItemStatus,
+  TripSectionContentType,
+  TripSectionItemStatus,
+  SpotCategory,
+  SpotPriority,
+  MealTag,
 } from "@/lib/schemas";
 import { runWithProfile } from "@/lib/profile-context";
 
@@ -633,51 +638,212 @@ function buildServer(): McpServer {
     {
       title: "List trips",
       description:
-        "List upcoming / current trips with their _id, title, destination, dates, and item counts.",
+        "List upcoming / current trips with their _id, title, destination, and dates.",
       inputSchema: {},
     },
     async () => {
       const list = await trips.listTrips({ archived: false });
-      const enriched = await Promise.all(
-        list.map(async (t) => ({
-          ...t,
-          counts: await trips.countItems(t._id),
-        }))
-      );
-      return asText(enriched);
+      return asText(list);
+    }
+  );
+
+  // ---------- Trip sections ----------
+
+  server.registerTool(
+    "list_trip_sections",
+    {
+      title: "List trip sections",
+      description:
+        "List every section and subsection for a trip (flat list — use parent_id to see the 2-level hierarchy: null = top-level section, otherwise a subsection of that section). Each has a content_type of 'tasks' (checklist items with status/due date/notes) or 'spots' (food/beach-club recommendations). Find trip_id via list_trips.",
+      inputSchema: {
+        trip_id: z.string(),
+      },
+    },
+    async ({ trip_id }) => asText(await tripSections.listSections(trip_id))
+  );
+
+  server.registerTool(
+    "create_trip_section",
+    {
+      title: "Create trip section",
+      description:
+        "Create a top-level section or a subsection under one. Subsections cannot themselves have children (2-level max). content_type determines what kind of leaf content it can hold: 'tasks' (default) or 'spots'.",
+      inputSchema: {
+        trip_id: z.string(),
+        name: z.string().min(1).max(200),
+        parent_id: z.string().nullable().optional(),
+        content_type: TripSectionContentType.optional(),
+      },
+    },
+    async ({ trip_id, name, parent_id, content_type }) => {
+      try {
+        return asText(
+          await tripSections.createSection(trip_id, {
+            name,
+            parent_id: parent_id ?? null,
+            content_type,
+          })
+        );
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: err instanceof Error ? err.message : String(err),
+            },
+          ],
+          isError: true,
+        };
+      }
     }
   );
 
   server.registerTool(
-    "list_trip_prep",
+    "delete_trip_section",
     {
-      title: "List trip prep items",
+      title: "Delete trip section",
       description:
-        "Show the prep checklist for a trip — each item's name, owner, status, due_date, notes. Find trip_id via list_trips.",
-      inputSchema: {
-        trip_id: z.string().describe("Trip _id"),
-      },
+        "Delete a section. Permanent — cascades to its subsections and all their items/spots, plus its own items/spots.",
+      inputSchema: { id: z.string() },
     },
-    async ({ trip_id }) => asText(await trips.listItems(trip_id))
+    async ({ id }) => asText({ ok: await tripSections.removeSection(id) })
   );
 
   server.registerTool(
-    "update_trip_item_status",
+    "list_trip_items",
     {
-      title: "Update a trip prep item's status",
+      title: "List trip checklist items",
       description:
-        "Change a trip prep item's status (yet_to_start / in_review / completed). Find the id via list_trip_prep.",
+        "List task-template items (name, status, due date, notes) for a trip, optionally restricted to one section. Only applies to sections with content_type 'tasks'.",
       inputSchema: {
-        id: z.string().describe("Trip item _id"),
-        status: TripItemStatus,
+        trip_id: z.string(),
+        section_id: z.string().optional(),
       },
     },
-    async ({ id, status }) => {
-      const updated = await trips.updateItem(id, { status });
-      if (!updated)
+    async ({ trip_id, section_id }) => {
+      const all = await tripSections.listItems(trip_id);
+      return asText(section_id ? all.filter((i) => i.section_id === section_id) : all);
+    }
+  );
+
+  server.registerTool(
+    "create_trip_item",
+    {
+      title: "Create trip checklist item",
+      description:
+        "Add a checklist item under a section (must have content_type 'tasks'). Find section_id via list_trip_sections.",
+      inputSchema: {
+        trip_id: z.string(),
+        section_id: z.string(),
+        name: z.string().min(1).max(300),
+      },
+    },
+    async ({ trip_id, section_id, name }) =>
+      asText(await tripSections.createItem(trip_id, section_id, { name }))
+  );
+
+  server.registerTool(
+    "update_trip_item",
+    {
+      title: "Update trip checklist item",
+      description:
+        "Update a checklist item's name, status (yet_to_start / in_review / completed), due date, or notes.",
+      inputSchema: {
+        id: z.string(),
+        name: z.string().min(1).max(300).optional(),
+        status: TripSectionItemStatus.optional(),
+        due_date: z.string().nullable().optional().describe("ISO yyyy-mm-dd"),
+        notes: z.string().nullable().optional(),
+      },
+    },
+    async ({ id, due_date, ...rest }) => {
+      const patch: Record<string, unknown> = { ...rest };
+      if (due_date !== undefined) {
+        patch.due_date = due_date ? new Date(due_date) : null;
+      }
+      const item = await tripSections.updateItem(id, patch);
+      if (!item)
         return { ...asText(`Trip item not found: ${id}`), isError: true };
-      return asText(updated);
+      return asText(item);
     }
+  );
+
+  server.registerTool(
+    "delete_trip_item",
+    {
+      title: "Delete trip checklist item",
+      description: "Delete a checklist item. Permanent.",
+      inputSchema: { id: z.string() },
+    },
+    async ({ id }) => asText({ ok: await tripSections.removeItem(id) })
+  );
+
+  server.registerTool(
+    "list_trip_spots",
+    {
+      title: "List trip spots",
+      description:
+        "List food/beach-club recommendation entries (name, category, priority, meal tags, dishes, link, notes) for a trip, optionally restricted to one section. Only applies to sections with content_type 'spots' (e.g. per-city subsections under a City Research section).",
+      inputSchema: {
+        trip_id: z.string(),
+        section_id: z.string().optional(),
+      },
+    },
+    async ({ trip_id, section_id }) => {
+      const all = await tripSections.listSpots(trip_id);
+      return asText(section_id ? all.filter((s) => s.section_id === section_id) : all);
+    }
+  );
+
+  server.registerTool(
+    "create_trip_spot",
+    {
+      title: "Create trip spot",
+      description:
+        "Add a spot (restaurant/cafe/beach club/etc) under a section (must have content_type 'spots'). Find section_id via list_trip_sections. Defaults to category 'other' and priority 'optional' — use update_trip_spot to set the rest.",
+      inputSchema: {
+        trip_id: z.string(),
+        section_id: z.string(),
+        name: z.string().min(1).max(200),
+      },
+    },
+    async ({ trip_id, section_id, name }) =>
+      asText(await tripSections.createSpot(trip_id, section_id, { name }))
+  );
+
+  server.registerTool(
+    "update_trip_spot",
+    {
+      title: "Update trip spot",
+      description:
+        "Update a spot's name, category, priority (must_try / optional), meal tags (breakfast/lunch/dinner), what-to-try dishes, link, or notes.",
+      inputSchema: {
+        id: z.string(),
+        name: z.string().min(1).max(200).optional(),
+        category: SpotCategory.optional(),
+        priority: SpotPriority.optional(),
+        meal_tags: z.array(MealTag).optional(),
+        dishes: z.string().nullable().optional(),
+        link: z.string().nullable().optional(),
+        notes: z.string().nullable().optional(),
+      },
+    },
+    async ({ id, ...patch }) => {
+      const spot = await tripSections.updateSpot(id, patch);
+      if (!spot)
+        return { ...asText(`Trip spot not found: ${id}`), isError: true };
+      return asText(spot);
+    }
+  );
+
+  server.registerTool(
+    "delete_trip_spot",
+    {
+      title: "Delete trip spot",
+      description: "Delete a spot entry. Permanent.",
+      inputSchema: { id: z.string() },
+    },
+    async ({ id }) => asText({ ok: await tripSections.removeSpot(id) })
   );
 
   // ---------- Meetings ----------

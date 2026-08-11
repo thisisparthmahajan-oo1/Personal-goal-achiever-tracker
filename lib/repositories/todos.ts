@@ -70,7 +70,10 @@ export async function get(id: string): Promise<Todo | null> {
 }
 
 export async function create(
-  input: TodoInput & { source_meeting_id?: string | null }
+  input: TodoInput & {
+    source_meeting_id?: string | null;
+    source_goal_id?: string | null;
+  }
 ): Promise<Todo> {
   const col = await collection();
   const now = new Date();
@@ -81,6 +84,7 @@ export async function create(
     title: input.title,
     notes: null,
     source_meeting_id: input.source_meeting_id ?? null,
+    source_goal_id: input.source_goal_id ?? null,
     sort_order: now.getTime(),
     status: "todo",
     completed_at: null,
@@ -95,6 +99,15 @@ export async function listForMeeting(meetingId: string): Promise<Todo[]> {
   const col = await collection();
   const docs = await col
     .find({ source_meeting_id: meetingId } as Filter<Todo>)
+    .sort({ created_at: 1 })
+    .toArray();
+  return docs.map((d) => normalize(TodoSchema.parse(d)));
+}
+
+export async function listForGoal(goalId: string): Promise<Todo[]> {
+  const col = await collection();
+  const docs = await col
+    .find({ source_goal_id: goalId } as Filter<Todo>)
     .sort({ created_at: 1 })
     .toArray();
   return docs.map((d) => normalize(TodoSchema.parse(d)));

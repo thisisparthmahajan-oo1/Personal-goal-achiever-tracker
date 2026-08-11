@@ -1,21 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import {
-  getTrip,
-  listItems,
-  listStays,
-  listTransport,
-  listActivities,
-  listBudget,
-} from "@/lib/repositories/trips";
+import { getTrip } from "@/lib/repositories/trips";
+import { listSections, listItems, listSpots } from "@/lib/repositories/trip-sections";
 import { getActiveProfileSlug } from "@/lib/profile";
 import { TripHero } from "@/components/library/trips/TripHero";
-import { StaysSection } from "@/components/library/trips/StaysSection";
-import { ItinerarySection } from "@/components/library/trips/ItinerarySection";
-import { BudgetSection } from "@/components/library/trips/BudgetSection";
-import { PrepChecklistSection } from "@/components/library/trips/PrepChecklistSection";
-import { TripNotesSection } from "@/components/library/trips/TripNotesSection";
+import { SectionTree } from "@/components/library/trips/SectionTree";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +21,10 @@ export default async function TripDetailPage({
   const trip = await getTrip(id);
   if (!trip) notFound();
 
-  const [items, stays, transport, activities, budget] = await Promise.all([
+  const [sections, items, spots] = await Promise.all([
+    listSections(trip._id),
     listItems(trip._id),
-    listStays(trip._id),
-    listTransport(trip._id),
-    listActivities(trip._id),
-    listBudget(trip._id),
+    listSpots(trip._id),
   ]);
 
   return (
@@ -53,26 +41,7 @@ export default async function TripDetailPage({
         <TripHero trip={trip} />
       </div>
 
-      <div className="space-y-3">
-        <ItinerarySection
-          trip={trip}
-          activities={activities}
-          currency={trip.currency}
-        />
-        <StaysSection
-          tripId={trip._id}
-          stays={stays}
-          legs={transport}
-          currency={trip.currency}
-        />
-        <BudgetSection
-          tripId={trip._id}
-          items={budget}
-          currency={trip.currency}
-        />
-        <PrepChecklistSection tripId={trip._id} items={items} />
-        <TripNotesSection tripId={trip._id} initialBody={trip.notes} />
-      </div>
+      <SectionTree tripId={trip._id} sections={sections} items={items} spots={spots} />
     </div>
   );
 }

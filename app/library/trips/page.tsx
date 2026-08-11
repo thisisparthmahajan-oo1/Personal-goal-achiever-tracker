@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plane } from "lucide-react";
-import { listTrips, countItems } from "@/lib/repositories/trips";
+import { listTrips } from "@/lib/repositories/trips";
 import { getActiveProfileSlug } from "@/lib/profile";
 import { NewTripForm } from "@/components/library/trips/NewTripForm";
 
@@ -13,7 +13,6 @@ export default async function TripsIndexPage() {
   if (slug === "office") notFound();
 
   const trips = await listTrips({ archived: false });
-  const itemCounts = await Promise.all(trips.map((t) => countItems(t._id)));
 
   return (
     <div className="mx-auto max-w-3xl px-8 py-10">
@@ -32,7 +31,7 @@ export default async function TripsIndexPage() {
         </p>
         <h1 className="text-4xl font-semibold tracking-tight">Travel plans</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          One page per trip with a shared checklist — name, owner, status.
+          One page per trip.
         </p>
       </header>
 
@@ -46,32 +45,28 @@ export default async function TripsIndexPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {trips.map((t, i) => {
-            const c = itemCounts[i];
-            return (
-              <Link
-                key={t._id}
-                href={`/library/trips/${t._id}`}
-                className="group flex items-start gap-3 rounded-xl border border-border/40 bg-card/40 p-4 transition-colors hover:bg-card/60"
-              >
-                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary">
-                  <Plane className="size-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="priv text-lg font-semibold tracking-tight">
-                    {t.title}
-                  </h2>
+          {trips.map((t) => (
+            <Link
+              key={t._id}
+              href={`/library/trips/${t._id}`}
+              className="group flex items-start gap-3 rounded-xl border border-border/40 bg-card/40 p-4 transition-colors hover:bg-card/60"
+            >
+              <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary">
+                <Plane className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="priv text-lg font-semibold tracking-tight">
+                  {t.title}
+                </h2>
+                {t.destination && (
                   <p className="priv mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
-                    {c.total === 0
-                      ? "no items yet"
-                      : `${c.completed}/${c.total} done`}
-                    {t.destination ? ` · ${t.destination}` : ""}
+                    {t.destination}
                   </p>
-                </div>
-                <ChevronRight className="size-4 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
-              </Link>
-            );
-          })}
+                )}
+              </div>
+              <ChevronRight className="size-4 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+            </Link>
+          ))}
         </div>
       )}
     </div>

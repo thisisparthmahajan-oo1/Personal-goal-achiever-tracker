@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as goals from "@/lib/repositories/goals";
+import * as todos from "@/lib/repositories/todos";
 import { GoalInputSchema, GoalPatchSchema } from "@/lib/schemas";
 
 function emptyToNull(v: FormDataEntryValue | null): string | null {
@@ -55,4 +56,13 @@ export async function updateGoalStatusAction(id: string, status: "active" | "com
   await goals.update(id, { status });
   revalidatePath("/");
   revalidatePath(`/goals/${id}`);
+}
+
+// ---------- Todos (sourced from a goal) ----------
+
+export async function addGoalTodoAction(input: { goal_id: string; title: string }) {
+  const title = input.title.trim();
+  if (!title) return;
+  await todos.create({ title, source_goal_id: input.goal_id });
+  revalidatePath(`/goals/${input.goal_id}`);
 }
