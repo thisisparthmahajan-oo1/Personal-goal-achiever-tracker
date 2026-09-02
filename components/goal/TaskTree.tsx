@@ -251,7 +251,7 @@ function TaskNode({
             current={node.recurrence}
             disabled={node.weight > 0 || hasChildren}
           />
-          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
             {canAddSubtask && (
               <button
                 type="button"

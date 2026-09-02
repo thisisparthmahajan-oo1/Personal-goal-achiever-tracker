@@ -73,7 +73,7 @@ function ResourcePill({ resource }: { resource: GoalResource }) {
         onClick={copy}
         title={copied ? "Copied!" : "Copy link"}
         className={cn(
-          "ml-px inline-flex items-center justify-center rounded-md border border-border/30 bg-card/30 px-1 text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover/pill:opacity-100",
+          "ml-px inline-flex items-center justify-center rounded-md border border-border/30 bg-card/30 px-1 text-muted-foreground opacity-100 transition-opacity hover:text-primary sm:opacity-0 sm:group-hover/pill:opacity-100 sm:group-focus-within/pill:opacity-100",
           copied && "text-primary opacity-100"
         )}
       >
@@ -88,7 +88,7 @@ function ResourcePill({ resource }: { resource: GoalResource }) {
         disabled={pending}
         title="Remove"
         className={cn(
-          "ml-px inline-flex items-center justify-center rounded-md border border-border/30 bg-card/30 px-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/pill:opacity-100",
+          "ml-px inline-flex items-center justify-center rounded-md border border-border/30 bg-card/30 px-1 text-muted-foreground opacity-100 transition-opacity hover:text-destructive sm:opacity-0 sm:group-hover/pill:opacity-100 sm:group-focus-within/pill:opacity-100",
           pending && "opacity-100"
         )}
       >

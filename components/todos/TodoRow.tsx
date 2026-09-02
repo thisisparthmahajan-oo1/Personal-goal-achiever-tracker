@@ -2,7 +2,14 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Trash2, Pencil, StickyNote, ChevronDown, CalendarClock } from "lucide-react";
+import {
+  Trash2,
+  Pencil,
+  StickyNote,
+  ChevronDown,
+  CalendarClock,
+  ExternalLink,
+} from "lucide-react";
 import {
   cycleTodoStatusAction,
   renameTodoAction,
@@ -12,6 +19,23 @@ import {
 import type { Todo } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
 import { RichEditor } from "@/components/editor/RichEditor";
+
+function splitTitleUrl(title: string): { text: string; url: string | null } {
+  const m = title.match(/https?:\/\/\S+/i);
+  if (!m) return { text: title, url: null };
+  const url = m[0].replace(/[),.;]+$/, "");
+  let text = title.replace(m[0], "").trim();
+  text = text.replace(/[\s]*[—–\-:][\s]*$/, "").trim();
+  return { text, url };
+}
+
+function urlLabel(url: string): string {
+  try {
+    return new URL(url).host.replace(/^www\./, "");
+  } catch {
+    return "open";
+  }
+}
 
 export function TodoRow({
   todo,
@@ -23,6 +47,7 @@ export function TodoRow({
   const [pending, startTransition] = useTransition();
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(todo.title);
+  const [titleExpanded, setTitleExpanded] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [notesDraft, setNotesDraft] = useState(todo.notes ?? "");
   const titleRef = useRef<HTMLInputElement>(null);
@@ -112,17 +137,45 @@ export function TodoRow({
             className="priv flex-1 min-w-0 bg-transparent text-sm outline-none"
           />
         ) : (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className={cn(
-              "priv flex-1 min-w-0 truncate text-left text-sm",
-              done && "text-muted-foreground line-through decoration-muted-foreground/60"
-            )}
-            title="Click to show notes"
-          >
-            {todo.title}
-          </button>
+          (() => {
+            const { text, url } = splitTitleUrl(todo.title);
+            return (
+              <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setTitleExpanded((v) => !v)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setTitleExpanded((v) => !v);
+                    }
+                  }}
+                  title={titleExpanded ? "Click to collapse" : text}
+                  className={cn(
+                    "priv min-w-0 cursor-pointer text-left text-sm",
+                    titleExpanded ? "break-words" : "truncate",
+                    done && "text-muted-foreground line-through decoration-muted-foreground/60"
+                  )}
+                >
+                  {text}
+                </span>
+                {url && (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={url}
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0 inline-flex items-center gap-0.5 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em] text-primary transition-colors hover:bg-primary/20"
+                  >
+                    <ExternalLink className="size-2.5" />
+                    {urlLabel(url)}
+                  </a>
+                )}
+              </div>
+            );
+          })()
         )}
 
         {hasNotes && !expanded && (
