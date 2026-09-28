@@ -112,6 +112,13 @@ export type BookType = z.infer<typeof BookType>;
 export const BookStatus = z.enum(["pipelined", "in-progress", "completed"]);
 export type BookStatus = z.infer<typeof BookStatus>;
 
+export const BookSectionSchema = z.object({
+  id: z.string(),
+  title: z.string().default(""),
+  body: z.string().default(""),
+});
+export type BookSection = z.infer<typeof BookSectionSchema>;
+
 export const BookEntrySchema = z.object({
   _id: z.string(),
   profile_id: z.string(),
@@ -121,6 +128,8 @@ export const BookEntrySchema = z.object({
   status: BookStatus.default("pipelined"),
   start_date: z.coerce.date().nullable().default(null),
   end_date: z.coerce.date().nullable().default(null),
+  body: z.string().default(""),
+  sections: z.array(BookSectionSchema).default([]),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
 });
@@ -129,6 +138,7 @@ export type BookEntry = z.infer<typeof BookEntrySchema>;
 export const BookEntryInputSchema = BookEntrySchema.omit({
   _id: true,
   profile_id: true,
+  sections: true,
   created_at: true,
   updated_at: true,
 }).extend({

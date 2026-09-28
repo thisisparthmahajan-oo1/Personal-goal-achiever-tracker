@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { format } from "date-fns";
+import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { StatusPill } from "./StatusPill";
 import { EditableDateCell } from "./EditableDateCell";
@@ -14,7 +15,16 @@ export function BookRow({ book }: { book: BookEntry }) {
   return (
     <tr className="group border-b border-border/20 transition-colors hover:bg-card/30">
       <td className="px-3 py-2.5">
-        <span className="priv text-sm text-foreground">{book.title}</span>
+        {book.type === "non-fiction" ? (
+          <Link
+            href={`/library/books/${book._id}`}
+            className="priv text-sm text-foreground underline-offset-2 hover:text-primary hover:underline"
+          >
+            {book.title}
+          </Link>
+        ) : (
+          <span className="priv text-sm text-foreground">{book.title}</span>
+        )}
       </td>
       <td className="px-3 py-2.5">
         <span

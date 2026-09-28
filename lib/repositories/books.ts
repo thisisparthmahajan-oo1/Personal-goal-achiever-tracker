@@ -7,6 +7,7 @@ import {
   type BookEntry,
   type BookEntryInput,
   type BookEntryPatch,
+  type BookSection,
 } from "@/lib/schemas";
 
 const COLLECTION = "book_entries";
@@ -40,6 +41,8 @@ export async function create(input: BookEntryInput): Promise<BookEntry> {
     status: input.status ?? "pipelined",
     start_date: input.start_date ?? null,
     end_date: input.end_date ?? null,
+    body: input.body ?? "",
+    sections: [],
     created_at: now,
     updated_at: now,
   };
@@ -68,4 +71,60 @@ export async function remove(id: string): Promise<boolean> {
   const col = await collection();
   const result = await col.deleteOne({ _id: id } as Filter<BookEntry>);
   return result.deletedCount === 1;
+}
+
+async function writeSections(
+  id: string,
+  sections: BookSection[]
+): Promise<BookEntry | null> {
+  const col = await collection();
+  const result = await col.findOneAndUpdate(
+    { _id: id } as Filter<BookEntry>,
+    { $set: { sections, updated_at: new Date() } },
+    { returnDocument: "after" }
+  );
+  return result ? BookEntrySchema.parse(result) : null;
+}
+
+export async function addSection(
+  id: string,
+  title: string
+): Promise<BookEntry | null> {
+  const existing = await get(id);
+  if (!existing) return null;
+  const section: BookSection = {
+    id: randomUUID(),
+    title,
+    body: "",
+  };
+  return writeSections(id, [...existing.sections, section]);
+}
+
+export async function updateSection(
+  id: string,
+  sectionId: string,
+  patch: { title?: string; body?: string }
+): Promise<BookEntry | null> {
+  const existing = await get(id);
+  if (!existing) return null;
+  const next = existing.sections.map((s) =>
+    s.id === sectionId
+      ? {
+          ...s,
+          ...(patch.title !== undefined ? { title: patch.title } : {}),
+          ...(patch.body !== undefined ? { body: patch.body } : {}),
+        }
+      : s
+  );
+  return writeSections(id, next);
+}
+
+export async function removeSection(
+  id: string,
+  sectionId: string
+): Promise<BookEntry | null> {
+  const existing = await get(id);
+  if (!existing) return null;
+  const next = existing.sections.filter((s) => s.id !== sectionId);
+  return writeSections(id, next);
 }

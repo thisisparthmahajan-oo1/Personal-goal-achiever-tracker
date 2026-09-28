@@ -31,6 +31,7 @@ export async function createBookAction(input: {
     status: BookStatus.parse(status),
     start_date: parseDate(input.start_date),
     end_date: parseDate(input.end_date),
+    body: "",
   });
   revalidatePath("/library/books");
   revalidatePath("/library");
@@ -62,6 +63,7 @@ export async function setBookFieldAction(
     domains?: string[];
     start_date?: string | null;
     end_date?: string | null;
+    body?: string;
   }
 ) {
   const next: Record<string, unknown> = {};
@@ -71,12 +73,45 @@ export async function setBookFieldAction(
     next.domains = patch.domains.filter((d) => d.trim().length > 0);
   if (patch.start_date !== undefined) next.start_date = parseDate(patch.start_date);
   if (patch.end_date !== undefined) next.end_date = parseDate(patch.end_date);
+  if (patch.body !== undefined) next.body = patch.body;
   await books.update(id, next);
   revalidatePath("/library/books");
+  revalidatePath(`/library/books/${id}`);
 }
 
 export async function deleteBookAction(id: string) {
   await books.remove(id);
   revalidatePath("/library/books");
   revalidatePath("/library");
+}
+
+// ---------- Notes sections ----------
+
+function pathsForBook(id: string) {
+  return ["/library/books", `/library/books/${id}`];
+}
+
+export async function addBookSectionAction(input: {
+  book_id: string;
+  title: string;
+}) {
+  await books.addSection(input.book_id, input.title);
+  for (const p of pathsForBook(input.book_id)) revalidatePath(p);
+}
+
+export async function updateBookSectionAction(
+  bookId: string,
+  sectionId: string,
+  patch: { title?: string; body?: string }
+) {
+  const next: { title?: string; body?: string } = {};
+  if (patch.title !== undefined) next.title = patch.title;
+  if (patch.body !== undefined) next.body = patch.body;
+  await books.updateSection(bookId, sectionId, next);
+  for (const p of pathsForBook(bookId)) revalidatePath(p);
+}
+
+export async function removeBookSectionAction(bookId: string, sectionId: string) {
+  await books.removeSection(bookId, sectionId);
+  for (const p of pathsForBook(bookId)) revalidatePath(p);
 }
