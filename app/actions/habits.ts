@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import * as tasks from "@/lib/repositories/tasks";
+import { requireSession } from "@/lib/require-session";
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 
@@ -14,6 +15,7 @@ export async function createHabitAction(input: {
   title: string;
   weekdays?: number[];
 }) {
+  await requireSession();
   const days = normalizeWeekdays(input.weekdays);
   await tasks.create({
     goal_id: null,
@@ -41,6 +43,7 @@ export async function setHabitWeekdaysAction(
   taskId: string,
   weekdays: number[]
 ) {
+  await requireSession();
   const days = normalizeWeekdays(weekdays);
   await tasks.update(taskId, {
     recurrence: {
@@ -55,6 +58,7 @@ export async function setHabitWeekdaysAction(
 }
 
 export async function deleteHabitAction(id: string) {
+  await requireSession();
   await tasks.remove(id);
   revalidatePath("/habits");
   revalidatePath("/");

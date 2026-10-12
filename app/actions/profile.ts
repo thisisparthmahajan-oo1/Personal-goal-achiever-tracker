@@ -4,8 +4,10 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getBySlug } from "@/lib/repositories/profiles";
 import { PROFILE_COOKIE_NAME } from "@/lib/profile";
+import { requireSession } from "@/lib/require-session";
 
 export async function setActiveProfileAction(slug: string) {
+  await requireSession();
   const profile = await getBySlug(slug);
   if (!profile) {
     throw new Error(`Profile not found: ${slug}`);

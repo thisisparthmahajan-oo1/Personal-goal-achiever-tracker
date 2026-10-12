@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import * as goals from "@/lib/repositories/goals";
 import * as todos from "@/lib/repositories/todos";
 import { GoalInputSchema, GoalPatchSchema } from "@/lib/schemas";
+import { requireSession } from "@/lib/require-session";
 
 function emptyToNull(v: FormDataEntryValue | null): string | null {
   if (typeof v !== "string") return null;
@@ -20,6 +21,7 @@ function parseDate(v: FormDataEntryValue | null): Date | null {
 }
 
 export async function createGoalAction(formData: FormData) {
+  await requireSession();
   const parsed = GoalInputSchema.parse({
     title: formData.get("title"),
     description: emptyToNull(formData.get("description")),
@@ -33,6 +35,7 @@ export async function createGoalAction(formData: FormData) {
 }
 
 export async function updateGoalAction(id: string, formData: FormData) {
+  await requireSession();
   const parsed = GoalPatchSchema.parse({
     title: formData.get("title"),
     description: emptyToNull(formData.get("description")),
@@ -47,12 +50,14 @@ export async function updateGoalAction(id: string, formData: FormData) {
 }
 
 export async function deleteGoalAction(id: string) {
+  await requireSession();
   await goals.remove(id);
   revalidatePath("/");
   redirect("/");
 }
 
 export async function updateGoalStatusAction(id: string, status: "active" | "completed" | "archived") {
+  await requireSession();
   await goals.update(id, { status });
   revalidatePath("/");
   revalidatePath(`/goals/${id}`);
@@ -61,6 +66,7 @@ export async function updateGoalStatusAction(id: string, status: "active" | "com
 // ---------- Todos (sourced from a goal) ----------
 
 export async function addGoalTodoAction(input: { goal_id: string; title: string }) {
+  await requireSession();
   const title = input.title.trim();
   if (!title) return;
   await todos.create({ title, source_goal_id: input.goal_id });

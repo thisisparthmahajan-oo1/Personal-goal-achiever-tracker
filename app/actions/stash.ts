@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import * as stash from "@/lib/repositories/stash";
+import { requireSession } from "@/lib/require-session";
 
 function normalizeUrl(raw: string): string {
   const t = raw.trim();
@@ -16,6 +17,7 @@ export async function createStashItemAction(input: {
   url?: string | null;
   note?: string | null;
 }) {
+  await requireSession();
   const label = input.label.trim();
   const url = input.url ? normalizeUrl(input.url) : null;
   const note = input.note?.trim() || null;
@@ -31,6 +33,7 @@ export async function updateStashItemAction(
   id: string,
   patch: { label?: string; url?: string | null; note?: string | null }
 ) {
+  await requireSession();
   const existing = await stash.get(id);
   if (!existing) return;
   const next: Record<string, unknown> = {};
@@ -50,6 +53,7 @@ export async function updateStashItemAction(
 }
 
 export async function deleteStashItemAction(id: string) {
+  await requireSession();
   await stash.remove(id);
   revalidatePath("/library/stash");
   revalidatePath("/library");

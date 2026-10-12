@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import * as goalNotes from "@/lib/repositories/goal-notes";
 import { GoalNoteKind, type GoalNoteKind as GoalNoteKindT } from "@/lib/schemas";
+import { requireSession } from "@/lib/require-session";
 
 export async function createGoalNoteAction(input: {
   goal_id: string;
@@ -10,6 +11,7 @@ export async function createGoalNoteAction(input: {
   kind: GoalNoteKindT;
   body: string;
 }) {
+  await requireSession();
   const body = input.body.trim();
   if (!body) return;
   await goalNotes.create({
@@ -30,6 +32,7 @@ export async function updateGoalNoteAction(
     task_id?: string | null;
   }
 ) {
+  await requireSession();
   const existing = await goalNotes.get(id);
   if (!existing) return;
   const next: Record<string, unknown> = {};
@@ -46,6 +49,7 @@ export async function updateGoalNoteAction(
 }
 
 export async function deleteGoalNoteAction(id: string) {
+  await requireSession();
   const existing = await goalNotes.get(id);
   if (!existing) return;
   await goalNotes.remove(id);

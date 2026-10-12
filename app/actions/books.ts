@@ -8,6 +8,7 @@ import {
   type BookType as BookTypeT,
   type BookStatus as BookStatusT,
 } from "@/lib/schemas";
+import { requireSession } from "@/lib/require-session";
 
 function parseDate(v: string | null | undefined): Date | null {
   if (!v) return null;
@@ -23,6 +24,7 @@ export async function createBookAction(input: {
   start_date?: string | null;
   end_date?: string | null;
 }) {
+  await requireSession();
   const status = input.status ?? "pipelined";
   await books.create({
     title: input.title.trim(),
@@ -38,6 +40,7 @@ export async function createBookAction(input: {
 }
 
 export async function setBookStatusAction(id: string, status: BookStatusT) {
+  await requireSession();
   const existing = await books.get(id);
   if (!existing) return;
   const now = new Date();
@@ -66,6 +69,7 @@ export async function setBookFieldAction(
     body?: string;
   }
 ) {
+  await requireSession();
   const next: Record<string, unknown> = {};
   if (patch.title !== undefined) next.title = patch.title.trim();
   if (patch.type !== undefined) next.type = BookType.parse(patch.type);
@@ -80,6 +84,7 @@ export async function setBookFieldAction(
 }
 
 export async function deleteBookAction(id: string) {
+  await requireSession();
   await books.remove(id);
   revalidatePath("/library/books");
   revalidatePath("/library");
@@ -95,6 +100,7 @@ export async function addBookSectionAction(input: {
   book_id: string;
   title: string;
 }) {
+  await requireSession();
   await books.addSection(input.book_id, input.title);
   for (const p of pathsForBook(input.book_id)) revalidatePath(p);
 }
@@ -104,6 +110,7 @@ export async function updateBookSectionAction(
   sectionId: string,
   patch: { title?: string; body?: string }
 ) {
+  await requireSession();
   const next: { title?: string; body?: string } = {};
   if (patch.title !== undefined) next.title = patch.title;
   if (patch.body !== undefined) next.body = patch.body;
@@ -112,6 +119,7 @@ export async function updateBookSectionAction(
 }
 
 export async function removeBookSectionAction(bookId: string, sectionId: string) {
+  await requireSession();
   await books.removeSection(bookId, sectionId);
   for (const p of pathsForBook(bookId)) revalidatePath(p);
 }

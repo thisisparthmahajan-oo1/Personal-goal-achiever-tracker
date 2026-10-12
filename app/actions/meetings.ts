@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import * as meetings from "@/lib/repositories/meetings";
 import * as todos from "@/lib/repositories/todos";
+import { requireSession } from "@/lib/require-session";
 
 function pathsForMeeting(seriesId: string | null, meetingId: string) {
   const paths = [
@@ -22,6 +23,7 @@ export async function createMeetingSeriesAction(input: {
   cadence_label?: string | null;
   default_attendees?: string | null;
 }) {
+  await requireSession();
   const title = input.title.trim();
   if (!title) return;
   const series = await meetings.createSeries({
@@ -42,6 +44,7 @@ export async function updateMeetingSeriesAction(
     default_attendees?: string | null;
   }
 ) {
+  await requireSession();
   const next: Record<string, unknown> = {};
   if (patch.title !== undefined) {
     const t = patch.title.trim();
@@ -63,12 +66,14 @@ export async function archiveMeetingSeriesAction(
   id: string,
   archived: boolean
 ) {
+  await requireSession();
   await meetings.updateSeries(id, { archived });
   revalidatePath("/library/meetings");
   revalidatePath(`/library/meetings/series/${id}`);
 }
 
 export async function deleteMeetingSeriesAction(id: string) {
+  await requireSession();
   await meetings.removeSeries(id);
   revalidatePath("/library");
   revalidatePath("/library/meetings");
@@ -82,6 +87,7 @@ export async function createMeetingAction(input: {
   meeting_date?: Date | string;
   body?: string;
 }) {
+  await requireSession();
   const seriesId = input.series_id ?? null;
   let title = input.title?.trim() ?? "";
   let body = input.body ?? "";
@@ -124,6 +130,7 @@ export async function updateMeetingAction(
     series_id?: string | null;
   }
 ) {
+  await requireSession();
   const existing = await meetings.getMeeting(id);
   if (!existing) return;
   const next: Record<string, unknown> = {};
@@ -146,6 +153,7 @@ export async function updateMeetingAction(
 }
 
 export async function deleteMeetingAction(id: string) {
+  await requireSession();
   const existing = await meetings.getMeeting(id);
   if (!existing) return;
   await meetings.removeMeeting(id);
@@ -158,6 +166,7 @@ export async function addMeetingSectionAction(input: {
   meeting_id: string;
   title?: string;
 }) {
+  await requireSession();
   const title = input.title?.trim() ?? "";
   const existing = await meetings.getMeeting(input.meeting_id);
   if (!existing) return;
@@ -171,6 +180,7 @@ export async function updateMeetingSectionAction(
   sectionId: string,
   patch: { title?: string; body?: string }
 ) {
+  await requireSession();
   const existing = await meetings.getMeeting(meetingId);
   if (!existing) return;
   const next: { title?: string; body?: string } = {};
@@ -185,6 +195,7 @@ export async function removeMeetingSectionAction(
   meetingId: string,
   sectionId: string
 ) {
+  await requireSession();
   const existing = await meetings.getMeeting(meetingId);
   if (!existing) return;
   await meetings.removeSection(meetingId, sectionId);
@@ -198,6 +209,7 @@ export async function addActionItemAction(input: {
   meeting_id: string;
   title: string;
 }) {
+  await requireSession();
   const title = input.title.trim();
   if (!title) return;
   await todos.create({ title, source_meeting_id: input.meeting_id });

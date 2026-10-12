@@ -9,6 +9,7 @@ import type {
   SpotPriority,
   MealTag,
 } from "@/lib/schemas";
+import { requireSession } from "@/lib/require-session";
 
 function pathsForTrip(tripId: string) {
   return ["/library/trips", `/library/trips/${tripId}`];
@@ -28,6 +29,7 @@ export async function createSectionAction(input: {
   parent_id?: string | null;
   content_type?: TripSectionContentType;
 }) {
+  await requireSession();
   const name = input.name.trim();
   if (!name) return;
   await sections.createSection(input.trip_id, {
@@ -43,6 +45,7 @@ export async function renameSectionAction(
   tripId: string,
   name: string
 ) {
+  await requireSession();
   const trimmed = name.trim();
   if (!trimmed) return;
   await sections.updateSection(sectionId, { name: trimmed });
@@ -50,11 +53,13 @@ export async function renameSectionAction(
 }
 
 export async function deleteSectionAction(sectionId: string, tripId: string) {
+  await requireSession();
   await sections.removeSection(sectionId);
   for (const p of pathsForTrip(tripId)) revalidatePath(p);
 }
 
 export async function reorderSectionsAction(ids: string[], tripId: string) {
+  await requireSession();
   if (!Array.isArray(ids) || ids.length === 0) return;
   await sections.setSectionOrder(ids);
   for (const p of pathsForTrip(tripId)) revalidatePath(p);
@@ -67,6 +72,7 @@ export async function createSectionItemAction(input: {
   section_id: string;
   name: string;
 }) {
+  await requireSession();
   const name = input.name.trim();
   if (!name) return;
   await sections.createItem(input.trip_id, input.section_id, { name });
@@ -83,6 +89,7 @@ export async function updateSectionItemAction(
     notes?: string | null;
   }
 ) {
+  await requireSession();
   const next: Record<string, unknown> = {};
   if (patch.name !== undefined) {
     const n = patch.name.trim();
@@ -101,6 +108,7 @@ export async function cycleSectionItemStatusAction(
   itemId: string,
   tripId: string
 ) {
+  await requireSession();
   const existing = await sections.getItem(itemId);
   if (!existing) return;
   const idx = STATUS_ORDER.indexOf(existing.status);
@@ -110,6 +118,7 @@ export async function cycleSectionItemStatusAction(
 }
 
 export async function deleteSectionItemAction(itemId: string, tripId: string) {
+  await requireSession();
   await sections.removeItem(itemId);
   for (const p of pathsForTrip(tripId)) revalidatePath(p);
 }
@@ -121,6 +130,7 @@ export async function createSpotAction(input: {
   section_id: string;
   name: string;
 }) {
+  await requireSession();
   const name = input.name.trim();
   if (!name) return;
   await sections.createSpot(input.trip_id, input.section_id, { name });
@@ -140,6 +150,7 @@ export async function updateSpotAction(
     notes?: string | null;
   }
 ) {
+  await requireSession();
   const next: Record<string, unknown> = {};
   if (patch.name !== undefined) {
     const n = patch.name.trim();
@@ -157,6 +168,7 @@ export async function updateSpotAction(
 }
 
 export async function deleteSpotAction(spotId: string, tripId: string) {
+  await requireSession();
   await sections.removeSpot(spotId);
   for (const p of pathsForTrip(tripId)) revalidatePath(p);
 }

@@ -8,6 +8,7 @@ import {
   type RecurrenceRule,
   type TaskStatus as TaskStatusT,
 } from "@/lib/schemas";
+import { requireSession } from "@/lib/require-session";
 
 export async function createTaskAction(input: {
   goal_id: string;
@@ -16,6 +17,7 @@ export async function createTaskAction(input: {
   parent_task_id?: string | null;
   priority?: "low" | "med" | "high";
 }) {
+  await requireSession();
   const created = await tasks.create({
     goal_id: input.goal_id,
     title: input.title,
@@ -37,6 +39,7 @@ export async function setTaskStatusAction(
   status: TaskStatusT,
   goalId: string
 ) {
+  await requireSession();
   TaskStatus.parse(status);
   await tasks.update(id, { status });
   revalidatePath(`/goals/${goalId}`);
@@ -48,6 +51,7 @@ export async function setTaskWeightAction(
   goalId: string,
   weight: number
 ) {
+  await requireSession();
   await tasks.update(id, { weight });
   revalidatePath(`/goals/${goalId}`);
   revalidatePath("/");
@@ -63,11 +67,13 @@ export async function updateTaskAction(
     weight?: number;
   }
 ) {
+  await requireSession();
   await tasks.update(id, patch);
   revalidatePath(`/goals/${goalId}`);
 }
 
 export async function deleteTaskAction(id: string, goalId: string) {
+  await requireSession();
   await tasks.remove(id);
   revalidatePath(`/goals/${goalId}`);
   revalidatePath("/");
@@ -78,6 +84,7 @@ export async function setRecurrenceAction(
   goalId: string,
   rule: RecurrenceRule | null
 ) {
+  await requireSession();
   const parsed = rule ? RecurrenceRuleSchema.parse(rule) : null;
   // If turning on recurrence, force weight to 0 (the repo will validate).
   if (parsed) {
@@ -93,6 +100,7 @@ export async function toggleOccurrenceAction(
   goalId: string,
   occurrenceDate: string
 ) {
+  await requireSession();
   const date = new Date(occurrenceDate);
   await tasks.toggleOccurrence(taskId, date);
   if (goalId) {

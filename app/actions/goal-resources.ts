@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import * as goalResources from "@/lib/repositories/goal-resources";
+import { requireSession } from "@/lib/require-session";
 
 function normalizeUrl(raw: string): string {
   const t = raw.trim();
@@ -17,6 +18,7 @@ export async function createGoalResourceAction(input: {
   label: string;
   url: string;
 }) {
+  await requireSession();
   const label = input.label.trim();
   const url = normalizeUrl(input.url);
   if (!label || !url) return;
@@ -32,6 +34,7 @@ export async function updateGoalResourceAction(
   id: string,
   patch: { label?: string; url?: string }
 ) {
+  await requireSession();
   const existing = await goalResources.get(id);
   if (!existing) return;
   const next: Record<string, unknown> = {};
@@ -50,6 +53,7 @@ export async function updateGoalResourceAction(
 }
 
 export async function deleteGoalResourceAction(id: string) {
+  await requireSession();
   const existing = await goalResources.get(id);
   if (!existing) return;
   await goalResources.remove(id);

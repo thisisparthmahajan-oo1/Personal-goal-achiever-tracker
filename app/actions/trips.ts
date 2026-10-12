@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import * as trips from "@/lib/repositories/trips";
+import { requireSession } from "@/lib/require-session";
 
 function pathsForTrip(tripId: string) {
   return ["/library", "/library/trips", `/library/trips/${tripId}`];
@@ -13,6 +14,7 @@ export async function createTripAction(input: {
   title: string;
   destination?: string | null;
 }) {
+  await requireSession();
   const title = input.title.trim();
   if (!title) return;
   const trip = await trips.createTrip({
@@ -38,6 +40,7 @@ export async function updateTripAction(
     archived?: boolean;
   }
 ) {
+  await requireSession();
   const next: Record<string, unknown> = {};
   if (patch.title !== undefined) {
     const t = patch.title.trim();
@@ -64,6 +67,7 @@ export async function updateTripAction(
 }
 
 export async function deleteTripAction(id: string) {
+  await requireSession();
   await trips.removeTrip(id);
   revalidatePath("/library");
   revalidatePath("/library/trips");
